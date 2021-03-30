@@ -22,6 +22,7 @@
 
 #if defined(Q_OS_LINUX)
 #include <QProcess>
+#include <QFile>
 #endif
 
 #if defined(Q_OS_WIN)
