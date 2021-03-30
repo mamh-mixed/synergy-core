@@ -97,17 +97,14 @@ QString getOSInformation()
 
 #if defined(Q_OS_LINUX)
     result = "Linux";
-    try {
-        QStringList arguments;
-        arguments.append("/etc/os-release");
-        CommandProcess cp("/bin/cat", arguments);
-        QString output = cp.run();
 
+    QFile paramFile("/etc/os-release");
+    if(paramFile.open(QFile::ReadOnly | QFile::Text)) {
+        const QString fileStrings = QTextStream(&paramFile).readAll();
         QRegExp resultRegex(".*PRETTY_NAME=\"([^\"]+)\".*");
-        if (resultRegex.exactMatch(output)) {
+        if (resultRegex.exactMatch(fileStrings)) {
             result = resultRegex.cap(1);
         }
-    } catch (...) {
     }
 #endif
 
