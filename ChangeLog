@@ -11,6 +11,7 @@ Enhancements:
 - #7269 Reword file drag drop error to debug message
 - #7274 Only build necessary binaries
 - #7277 Change start errors to fatal
+- #7282 Improve error handling for thread jobs
 
 1.14.6
 ======
