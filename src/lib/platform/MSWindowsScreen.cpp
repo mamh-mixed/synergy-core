@@ -973,11 +973,17 @@ bool MSWindowsScreen::onPreDispatch(HWND hwnd, UINT message, WPARAM wParam, LPAR
     return true;
 
   case DESKFLOW_MSG_TOUCH:
+    LOG((CLOG_DEBUG "DESKFLOW_MSG_TOUCH: touchActive=%d isOnScreen=%d isPrimary=%d at %d,%d",
+         m_touchActivateScreen ? 1 : 0, m_isOnScreen ? 1 : 0, m_isPrimary ? 1 : 0,
+         (int)wParam, (int)lParam));
     if (!m_touchActivateScreen || m_isOnScreen)
       return true;
     {
-      if (m_touchDebounceTimer.getTime() < kTouchDebounceTime)
+      if (m_touchDebounceTimer.getTime() < kTouchDebounceTime) {
+        LOG((CLOG_DEBUG "DESKFLOW_MSG_TOUCH: debounced (%.0fms elapsed)",
+             m_touchDebounceTimer.getTime() * 1000.0));
         return true;
+      }
       m_touchDebounceTimer.reset();
 
       SInt32 x = static_cast<SInt32>(wParam);
@@ -1466,14 +1472,21 @@ bool MSWindowsScreen::onPointerInput(WPARAM wParam, LPARAM lParam)
 {
   UINT32 pointerId = GET_POINTERID_WPARAM(wParam);
 
-  if (!isPointerTypeTouch(pointerId))
+  if (!isPointerTypeTouch(pointerId)) {
+    DWORD pointerType = PT_POINTER;
+    GetPointerType(pointerId, &pointerType);
+    LOG((CLOG_DEBUG "WM_POINTER: non-touch type=%u (1=generic,2=touch,3=pen,4=mouse)", pointerType));
     return false;
+  }
 
   if (!m_touchActivateScreen || m_isOnScreen)
     return false;
 
-  if (m_touchDebounceTimer.getTime() < kTouchDebounceTime)
+  if (m_touchDebounceTimer.getTime() < kTouchDebounceTime) {
+    LOG((CLOG_DEBUG "WM_POINTER: touch debounced (%.0fms elapsed, %.0fms required)",
+         m_touchDebounceTimer.getTime() * 1000.0, kTouchDebounceTime * 1000.0));
     return true;
+  }
   m_touchDebounceTimer.reset();
 
   POINT pt;

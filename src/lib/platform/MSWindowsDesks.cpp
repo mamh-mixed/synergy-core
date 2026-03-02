@@ -444,11 +444,13 @@ LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM w
     if (self) {
       UINT32 pointerId = GET_POINTERID_WPARAM(wParam);
       DWORD pointerType = PT_POINTER;
-      GetPointerType(pointerId, &pointerType);
+      BOOL gotType = GetPointerType(pointerId, &pointerType);
+      LOG((CLOG_DEBUG "secondary WM_POINTERDOWN: pointerId=%u gotType=%d pointerType=%u",
+           pointerId, gotType ? 1 : 0, pointerType));
       if (pointerType == PT_TOUCH || pointerType == PT_PEN) {
         SInt32 x = GET_X_LPARAM(lParam);
         SInt32 y = GET_Y_LPARAM(lParam);
-        LOG((CLOG_DEBUG1 "secondary WM_POINTERDOWN touch at %d,%d", x, y));
+        LOG((CLOG_DEBUG "secondary WM_POINTERDOWN touch at %d,%d", x, y));
         PostThreadMessage(self->m_threadID, DESKFLOW_MSG_TOUCH,
                           static_cast<WPARAM>(x), static_cast<LPARAM>(y));
         return 0;
@@ -459,8 +461,11 @@ LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM w
 
   case WM_MOUSEMOVE: {
     LPARAM extraInfo = GetMessageExtraInfo();
-    if ((extraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE)
+    if ((extraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE) {
+      LOG((CLOG_DEBUG "secondary WM_MOUSEMOVE: touch signature detected (extraInfo=0x%08x), keeping hider",
+           (DWORD)extraInfo));
       break;
+    }
 
     MSWindowsDesks *self = reinterpret_cast<MSWindowsDesks *>(
         GetWindowLongPtr(hwnd, GWLP_USERDATA));
@@ -878,6 +883,28 @@ void MSWindowsDesks::registerTouchRawInput(HWND window, bool enable)
   if (!RegisterRawInputDevices(rids, 4, sizeof(RAWINPUTDEVICE))) {
     RegisterRawInputDevices(rids, 1, sizeof(RAWINPUTDEVICE));
   }
+
+  if (enable) {
+    UINT numDevices = 0;
+    if (GetRawInputDeviceList(NULL, &numDevices, sizeof(RAWINPUTDEVICELIST)) == 0 && numDevices > 0) {
+      RAWINPUTDEVICELIST *devices = new RAWINPUTDEVICELIST[numDevices];
+      if (GetRawInputDeviceList(devices, &numDevices, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1) {
+        LOG((CLOG_DEBUG "raw input: %u device(s) connected", numDevices));
+        for (UINT i = 0; i < numDevices; ++i) {
+          if (devices[i].dwType == RIM_TYPEHID) {
+            RID_DEVICE_INFO info = {};
+            UINT infoSize = sizeof(info);
+            info.cbSize = sizeof(info);
+            GetRawInputDeviceInfo(devices[i].hDevice, RIDI_DEVICEINFO, &info, &infoSize);
+            LOG((CLOG_DEBUG "  HID: VID=0x%04x PID=0x%04x page=0x%02x usage=0x%02x",
+                 info.hid.dwVendorId, info.hid.dwProductId,
+                 info.hid.usUsagePage, info.hid.usUsage));
+          }
+        }
+      }
+      delete[] devices;
+    }
+  }
 }
 
 void MSWindowsDesks::deskThread(void *vdesk)
@@ -929,6 +956,14 @@ void MSWindowsDesks::deskThread(void *vdesk)
                 reinterpret_cast<HRAWINPUT>(msg.lParam), RID_INPUT,
                 buffer, &size, sizeof(RAWINPUTHEADER)) != static_cast<UINT>(-1)) {
           RAWINPUT *raw = reinterpret_cast<RAWINPUT *>(buffer);
+
+          LOG((CLOG_DEBUG "WM_INPUT: type=%s isPrimary=%d count=%u sizeHid=%u",
+               raw->header.dwType == RIM_TYPEHID    ? "HID"
+               : raw->header.dwType == RIM_TYPEMOUSE ? "mouse" : "other",
+               m_isPrimary ? 1 : 0,
+               raw->header.dwType == RIM_TYPEHID ? raw->data.hid.dwCount : 0,
+               raw->header.dwType == RIM_TYPEHID ? raw->data.hid.dwSizeHid : 0));
+
           if (raw->header.dwType == RIM_TYPEHID &&
               raw->data.hid.dwCount > 0 && raw->data.hid.dwSizeHid > 0) {
             auto it = m_hidTouchDevices.find(raw->header.hDevice);
@@ -939,9 +974,12 @@ void MSWindowsDesks::deskThread(void *vdesk)
 
             SInt32 tx, ty;
             if (it->second.valid && parseHidTouch(raw, it->second, tx, ty)) {
-              LOG((CLOG_DEBUG1 "desk raw touch at %d,%d", tx, ty));
+              LOG((CLOG_DEBUG "WM_INPUT: parsed HID touch at %d,%d, posting DESKFLOW_MSG_TOUCH", tx, ty));
               PostThreadMessage(m_threadID, DESKFLOW_MSG_TOUCH,
                                 static_cast<WPARAM>(tx), static_cast<LPARAM>(ty));
+            } else {
+              LOG((CLOG_DEBUG "WM_INPUT: HID data present but parseHidTouch returned false (valid=%d)",
+                   it->second.valid ? 1 : 0));
             }
           }
         }

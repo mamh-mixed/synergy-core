@@ -595,11 +595,19 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
     // touch-synthesized mouse events as injected (LLMHF_INJECTED).
     if (g_touchActivateScreen && g_mode == kHOOK_RELAY_EVENTS) {
       bool isTouchEvent = (info->dwExtraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE;
+
+      if (wParam == WM_LBUTTONDOWN) {
+        LOG((CLOG_DEBUG "hook: WM_LBUTTONDOWN extraInfo=0x%08x touchSig=%s isPrimary=%d mode=%d",
+             (DWORD)info->dwExtraInfo, isTouchEvent ? "yes" : "no", g_isPrimary, g_mode));
+      }
+
       if (isTouchEvent && (wParam == WM_LBUTTONDOWN || wParam == WM_MOUSEMOVE)) {
         SInt32 x = static_cast<SInt32>(info->pt.x);
         SInt32 y = static_cast<SInt32>(info->pt.y);
+        LOG((CLOG_DEBUG "hook: touch at %d,%d posting DESKFLOW_MSG_TOUCH", x, y));
         PostThreadMessage(g_threadID, DESKFLOW_MSG_TOUCH, x, y);
         if (g_isPrimary) {
+          LOG((CLOG_DEBUG "hook: eating touch event (relay mode)"));
           return 1;
         }
       }
