@@ -95,8 +95,8 @@ typedef LONG NTSTATUS;
 #define DESKFLOW_MSG_FAKE_INPUT DESKFLOW_HOOK_LAST_MSG + 12
 // x; y
 #define DESKFLOW_MSG_FAKE_TOUCH DESKFLOW_HOOK_LAST_MSG + 13
-
-#define TOUCH_CLICK_TIMER_ID 1
+#define DESKFLOW_MSG_TOUCH_UPDATE DESKFLOW_HOOK_LAST_MSG + 14
+#define DESKFLOW_MSG_TOUCH_UP DESKFLOW_HOOK_LAST_MSG + 15
 
 static void send_keyboard_input(WORD wVk, WORD wScan, DWORD dwFlags)
 {
@@ -134,7 +134,6 @@ MSWindowsDesks::MSWindowsDesks(
     : m_isPrimary(isPrimary),
       m_noHooks(noHooks),
       m_isOnScreen(m_isPrimary),
-      m_deskLeaveTime(0),
       m_x(0),
       m_y(0),
       m_w(0),
@@ -434,6 +433,8 @@ LRESULT CALLBACK MSWindowsDesks::primaryDeskProc(HWND hwnd, UINT msg, WPARAM wPa
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
+void setCursorVisibility(bool visible);
+
 LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
   switch (msg) {
@@ -474,9 +475,7 @@ LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM w
         self->m_pendingTouchUp = false;
         SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
-        ULONGLONG elapsed = GetTickCount64() - self->m_touchHideTime;
-        LOG((CLOG_DEBUG "touch: finger up, hider hidden, %llu ms since shrink, injecting at %d,%d",
-             elapsed, x, y));
+        LOG((CLOG_DEBUG "touch: finger up, hider hidden, injecting at %d,%d", x, y));
         PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_FAKE_TOUCH,
                           static_cast<WPARAM>(x), static_cast<LPARAM>(y));
       } else {
@@ -487,41 +486,26 @@ LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM w
     return 0;
   }
 
-  case WM_TIMER: {
-    if (wParam == TOUCH_CLICK_TIMER_ID) {
-      KillTimer(hwnd, TOUCH_CLICK_TIMER_ID);
-      MSWindowsDesks *self = reinterpret_cast<MSWindowsDesks *>(
-          GetWindowLongPtr(hwnd, GWLP_USERDATA));
-      if (self) {
-        ULONGLONG elapsed = GetTickCount64() - self->m_touchHideTime;
-        LOG((CLOG_DEBUG "touch: timer fired, %llu ms after hide, injecting at %d,%d",
-             elapsed, self->m_pendingTouchX, self->m_pendingTouchY));
-        PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_FAKE_TOUCH,
-                          static_cast<WPARAM>(self->m_pendingTouchX),
-                          static_cast<LPARAM>(self->m_pendingTouchY));
-      }
-      return 0;
-    }
-    break;
-  }
-
   case WM_MOUSEMOVE: {
     LPARAM extraInfo = GetMessageExtraInfo();
     if ((extraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE) {
-      LOG((CLOG_DEBUG "secondary WM_MOUSEMOVE: touch signature detected (extraInfo=0x%08x), keeping hider",
-           (DWORD)extraInfo));
       break;
     }
 
     MSWindowsDesks *self = reinterpret_cast<MSWindowsDesks *>(
         GetWindowLongPtr(hwnd, GWLP_USERDATA));
     if (self && IsWindowVisible(hwnd)) {
-      if (GetTickCount64() - self->m_deskLeaveTime < 200) {
+      // deskLeave centers the cursor; ignore moves at that position
+      // so only real local input dismisses the hider
+      POINT pt;
+      GetCursorPos(&pt);
+      if (pt.x == self->m_xCenter && pt.y == self->m_yCenter) {
         break;
       }
       ReleaseCapture();
       SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+      setCursorVisibility(true);
       HCURSOR arrow = LoadCursor(NULL, IDC_ARROW);
       SetClassLongPtr(hwnd, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(arrow));
       SetCursor(arrow);
@@ -548,31 +532,17 @@ void MSWindowsDesks::deskMouseMove(SInt32 x, SInt32 y) const
 
 void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
 {
-  ULONGLONG elapsed = GetTickCount64() - m_touchHideTime;
-
   POINT pt = {x, y};
   HWND target = WindowFromPoint(pt);
   HWND fg = GetForegroundWindow();
 
-  char targetClass[128] = {0};
-  char targetTitle[128] = {0};
-  char fgClass[128] = {0};
-  char fgTitle[128] = {0};
-  if (target) {
-    GetClassNameA(target, targetClass, sizeof(targetClass));
-    GetWindowTextA(target, targetTitle, sizeof(targetTitle));
-  }
-  if (fg) {
-    GetClassNameA(fg, fgClass, sizeof(fgClass));
-    GetWindowTextA(fg, fgTitle, sizeof(fgTitle));
-  }
-
-  LOG((CLOG_DEBUG "touch: injecting at %d,%d  %llu ms after hide  target=\"%s\" [%s]  fg=\"%s\" [%s]",
-       x, y, elapsed, targetTitle, targetClass, fgTitle, fgClass));
+  LOG((CLOG_DEBUG "touch: injecting at %d,%d target=0x%08x fg=0x%08x",
+       x, y, target, fg));
 
   if (target) {
     HWND root = GetAncestor(target, GA_ROOT);
     if (root && root != fg) {
+      LOG((CLOG_DEBUG "touch: target root=0x%08x != fg, activating", root));
       DWORD targetThread = GetWindowThreadProcessId(root, NULL);
       DWORD curThread = GetCurrentThreadId();
 
@@ -581,42 +551,25 @@ void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
         attached = AttachThreadInput(targetThread, curThread, TRUE);
       }
 
-      // bypass foreground lock
       mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0);
-
-      BOOL fgOk = SetForegroundWindow(root);
+      SetForegroundWindow(root);
       BringWindowToTop(root);
-
-      char rootTitle[128] = {0};
-      GetWindowTextA(root, rootTitle, sizeof(rootTitle));
-
-      int waited = 0;
-      while (GetForegroundWindow() != root && waited < 200) {
-        Sleep(10);
-        waited += 10;
-      }
-      HWND newFg = GetForegroundWindow();
 
       if (attached) {
         AttachThreadInput(targetThread, curThread, FALSE);
       }
-
-      LOG((CLOG_DEBUG "touch: SetForegroundWindow(\"%s\")=%d, fg=0x%p (root=0x%p) waited=%dms",
-           rootTitle, fgOk, newFg, root, waited));
     }
   }
 
   static bool touchInitialized = false;
   if (!touchInitialized) {
-    touchInitialized = InitializeTouchInjection(1, TOUCH_FEEDBACK_NONE) != 0;
-    LOG((CLOG_DEBUG "touch: InitializeTouchInjection %s (err=%d)",
-         touchInitialized ? "ok" : "FAILED", GetLastError()));
+    touchInitialized = InitializeTouchInjection(2, TOUCH_FEEDBACK_NONE) != 0;
   }
 
   if (touchInitialized) {
     POINTER_TOUCH_INFO contact = {};
     contact.pointerInfo.pointerType = PT_TOUCH;
-    contact.pointerInfo.pointerId = 0;
+    contact.pointerInfo.pointerId = 1;
     contact.pointerInfo.ptPixelLocation.x = x;
     contact.pointerInfo.ptPixelLocation.y = y;
     contact.pointerInfo.pointerFlags =
@@ -631,29 +584,23 @@ void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
     contact.rcContact.top = y - 2;
     contact.rcContact.bottom = y + 2;
 
-    BOOL downOk = InjectTouchInput(1, &contact);
-    DWORD downErr = GetLastError();
+    if (!InjectTouchInput(1, &contact)) {
+      LOG((CLOG_DEBUG "touch: InjectTouchInput DOWN failed, error=%lu, falling back to mouse",
+           GetLastError()));
+      deskMouseMove(x, y);
+      send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
+      send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
+      return;
+    }
 
-    Sleep(20);
-
-    contact.pointerInfo.pointerFlags =
-        POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-    BOOL updOk = InjectTouchInput(1, &contact);
-
-    Sleep(20);
-
-    contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
-    BOOL upOk = InjectTouchInput(1, &contact);
-    DWORD upErr = GetLastError();
-
-    LOG((CLOG_DEBUG "touch: InjectTouchInput down=%d(err=%d) upd=%d up=%d(err=%d) at %d,%d",
-         downOk, downErr, updOk, upOk, upErr, x, y));
+    PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_TOUCH_UPDATE,
+                      static_cast<WPARAM>(x), static_cast<LPARAM>(y));
+    return;
   }
 
   deskMouseMove(x, y);
   send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
   send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
-  LOG((CLOG_DEBUG "touch: SendInput mouse click at %d,%d", x, y));
 }
 
 void MSWindowsDesks::deskMouseRelativeMove(SInt32 dx, SInt32 dy) const
@@ -727,32 +674,23 @@ void setCursorVisibility(bool visible)
 
 void MSWindowsDesks::deskEnter(Desk *desk)
 {
+  registerTouchRawInput(desk->m_window, false);
+
   if (!m_isPrimary) {
     ReleaseCapture();
 
     LONG_PTR exStyle = GetWindowLongPtr(desk->m_window, GWL_EXSTYLE);
-    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
-  } else {
-    registerTouchRawInput(desk->m_window, false);
+    exStyle = (exStyle | WS_EX_TRANSPARENT) & ~WS_EX_LAYERED;
+    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle);
   }
 
   bool touchEnter = false;
-  if (m_pendingTouchUp && m_touchLifted) {
+  if (m_pendingTouchUp) {
     touchEnter = true;
     m_pendingTouchUp = false;
     m_touchLifted = false;
     SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
-    m_touchHideTime = GetTickCount64();
-    SetTimer(desk->m_window, TOUCH_CLICK_TIMER_ID, 150, NULL);
-    LOG((CLOG_DEBUG "touch: deskEnter path, hider hidden, timer started at %d,%d",
-         m_pendingTouchX, m_pendingTouchY));
-  } else if (m_pendingTouchUp) {
-    touchEnter = true;
-    SetWindowPos(desk->m_window, HWND_BOTTOM, m_xCenter, m_yCenter, 1, 1,
-                 SWP_NOACTIVATE);
-    m_touchHideTime = GetTickCount64();
-    LOG((CLOG_DEBUG "touch: deskEnter, finger still down, hider shrunk to 1x1"));
   } else {
     SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
@@ -764,20 +702,26 @@ void MSWindowsDesks::deskEnter(Desk *desk)
   SetClassLongPtr(desk->m_window, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(arrow));
   SetCursor(arrow);
 
-  if (touchEnter) {
-    LOG((CLOG_DEBUG "touch: skipping foreground restore to preserve fullscreen app focus"));
-  } else {
-    // restore the foreground window
-    // XXX -- this raises the window to the top of the Z-order.  we
-    // want it to stay wherever it was to properly support X-mouse
-    // (mouse over activation) but i've no idea how to do that.
-    // the obvious workaround of using SetWindowPos() to move it back
-    // after being raised doesn't work.
+  // restore the foreground window
+  // XXX -- this raises the window to the top of the Z-order.  we
+  // want it to stay wherever it was to properly support X-mouse
+  // (mouse over activation) but i've no idea how to do that.
+  // the obvious workaround of using SetWindowPos() to move it back
+  // after being raised doesn't work.
+  if (desk->m_foregroundWindow) {
     DWORD thisThread = GetWindowThreadProcessId(desk->m_window, NULL);
     DWORD thatThread = GetWindowThreadProcessId(desk->m_foregroundWindow, NULL);
     AttachThreadInput(thatThread, thisThread, TRUE);
     SetForegroundWindow(desk->m_foregroundWindow);
     AttachThreadInput(thatThread, thisThread, FALSE);
+  }
+
+  if (touchEnter) {
+    LOG((CLOG_DEBUG "touch: deskEnter, injecting at %d,%d",
+         m_pendingTouchX, m_pendingTouchY));
+    PostThreadMessage(desk->m_threadID, DESKFLOW_MSG_FAKE_TOUCH,
+                      static_cast<WPARAM>(m_pendingTouchX),
+                      static_cast<LPARAM>(m_pendingTouchY));
   }
   EnableWindow(desk->m_window, desk->m_lowLevel ? FALSE : TRUE);
   desk->m_foregroundWindow = NULL;
@@ -856,16 +800,18 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
     SetClassLongPtr(desk->m_window, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(m_cursor));
 
     LONG_PTR exStyle = GetWindowLongPtr(desk->m_window, GWL_EXSTYLE);
-    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT);
+    exStyle = (exStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED;
+    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle);
 
     SetWindowPos(desk->m_window, HWND_TOPMOST, m_x, m_y, m_w, m_h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    SetLayeredWindowAttributes(desk->m_window, 0, 1, LWA_ALPHA);
 
     SetCapture(desk->m_window);
 
-    // brief delay for the hider window's blank cursor to take effect
     ARCH->sleep(0.03);
-    m_deskLeaveTime = GetTickCount64();
     deskMouseMove(m_xCenter, m_yCenter);
+
+    registerTouchRawInput(desk->m_window, true);
   }
 }
 
@@ -996,18 +942,13 @@ bool MSWindowsDesks::parseHidTouch(const RAWINPUT *raw, const HidTouchDevice &de
 
 void MSWindowsDesks::registerTouchRawInput(HWND window, bool enable)
 {
-  RAWINPUTDEVICE rids[4] = {};
-  DWORD flags = enable ? RIDEV_INPUTSINK : RIDEV_REMOVE;
-  HWND target = enable ? window : NULL;
+  RAWINPUTDEVICE rid = {};
+  rid.usUsagePage = 0x0D;
+  rid.usUsage = 0x04;
+  rid.dwFlags = enable ? RIDEV_INPUTSINK : RIDEV_REMOVE;
+  rid.hwndTarget = enable ? window : NULL;
 
-  rids[0] = {0x0D, 0x04, flags, target};
-  rids[1] = {0x0D, 0x05, flags, target};
-  rids[2] = {0x0D, 0x01, flags, target};
-  rids[3] = {0x0D, 0x02, flags, target};
-
-  if (!RegisterRawInputDevices(rids, 4, sizeof(RAWINPUTDEVICE))) {
-    RegisterRawInputDevices(rids, 1, sizeof(RAWINPUTDEVICE));
-  }
+  RegisterRawInputDevices(&rid, 1, sizeof(RAWINPUTDEVICE));
 
   if (enable) {
     UINT numDevices = 0;
@@ -1100,11 +1041,17 @@ void MSWindowsDesks::deskThread(void *vdesk)
             SInt32 tx, ty;
             if (it->second.valid && parseHidTouch(raw, it->second, tx, ty)) {
               LOG((CLOG_DEBUG "WM_INPUT: parsed HID touch at %d,%d, posting DESKFLOW_MSG_TOUCH", tx, ty));
+              if (!m_isPrimary && !m_isOnScreen) {
+                m_pendingTouchUp = true;
+                m_pendingTouchX = tx;
+                m_pendingTouchY = ty;
+              }
               PostThreadMessage(m_threadID, DESKFLOW_MSG_TOUCH,
                                 static_cast<WPARAM>(tx), static_cast<LPARAM>(ty));
-            } else {
-              LOG((CLOG_DEBUG "WM_INPUT: HID data present but parseHidTouch returned false (valid=%d)",
-                   it->second.valid ? 1 : 0));
+            } else if (!m_isPrimary && m_pendingTouchUp && it->second.valid) {
+              // tip switch went off on secondary; finger lifted
+              m_touchLifted = true;
+              LOG((CLOG_DEBUG "WM_INPUT: HID tip off, finger lifted"));
             }
           }
         }
@@ -1174,6 +1121,53 @@ void MSWindowsDesks::deskThread(void *vdesk)
     case DESKFLOW_MSG_FAKE_TOUCH:
       deskFakeTouchClick(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
       break;
+
+    case DESKFLOW_MSG_TOUCH_UPDATE: {
+      POINTER_TOUCH_INFO contact = {};
+      contact.pointerInfo.pointerType = PT_TOUCH;
+      contact.pointerInfo.pointerId = 1;
+      contact.pointerInfo.ptPixelLocation.x = static_cast<SInt32>(msg.wParam);
+      contact.pointerInfo.ptPixelLocation.y = static_cast<SInt32>(msg.lParam);
+      contact.pointerInfo.pointerFlags =
+          POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+      contact.touchFlags = TOUCH_FLAG_NONE;
+      contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_ORIENTATION |
+                          TOUCH_MASK_PRESSURE;
+      contact.orientation = 90;
+      contact.pressure = 32000;
+      contact.rcContact.left = contact.pointerInfo.ptPixelLocation.x - 2;
+      contact.rcContact.right = contact.pointerInfo.ptPixelLocation.x + 2;
+      contact.rcContact.top = contact.pointerInfo.ptPixelLocation.y - 2;
+      contact.rcContact.bottom = contact.pointerInfo.ptPixelLocation.y + 2;
+      InjectTouchInput(1, &contact);
+      PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_TOUCH_UP,
+                        msg.wParam, msg.lParam);
+      break;
+    }
+
+    case DESKFLOW_MSG_TOUCH_UP: {
+      POINTER_TOUCH_INFO contact = {};
+      contact.pointerInfo.pointerType = PT_TOUCH;
+      contact.pointerInfo.pointerId = 1;
+      contact.pointerInfo.ptPixelLocation.x = static_cast<SInt32>(msg.wParam);
+      contact.pointerInfo.ptPixelLocation.y = static_cast<SInt32>(msg.lParam);
+      contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
+      contact.touchFlags = TOUCH_FLAG_NONE;
+      contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_ORIENTATION |
+                          TOUCH_MASK_PRESSURE;
+      contact.orientation = 90;
+      contact.pressure = 32000;
+      contact.rcContact.left = contact.pointerInfo.ptPixelLocation.x - 2;
+      contact.rcContact.right = contact.pointerInfo.ptPixelLocation.x + 2;
+      contact.rcContact.top = contact.pointerInfo.ptPixelLocation.y - 2;
+      contact.rcContact.bottom = contact.pointerInfo.ptPixelLocation.y + 2;
+      InjectTouchInput(1, &contact);
+
+      deskMouseMove(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
+      send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
+      send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
+      break;
+    }
 
     case DESKFLOW_MSG_FAKE_WHEEL:
       // XXX -- add support for x-axis scrolling

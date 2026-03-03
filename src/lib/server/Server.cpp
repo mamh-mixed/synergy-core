@@ -485,6 +485,10 @@ void Server::switchScreen(BaseClientProxy *dst, SInt32 x, SInt32 y, bool forScre
     }
 #endif
 
+    if (m_active == m_primaryClient) {
+      m_touchSwitchCooldown.reset();
+    }
+
     // cut over
     m_active = dst;
 
@@ -1354,6 +1358,13 @@ void Server::handleTouchActivatedPrimaryEvent(const Event &event, void *)
 {
   IPrimaryScreen::MotionInfo *info = static_cast<IPrimaryScreen::MotionInfo *>(event.getData());
   LOG((CLOG_DEBUG1 "touch activated primary at %d,%d", info->m_x, info->m_y));
+
+  double elapsed = m_touchSwitchCooldown.getTime();
+  if (elapsed > 0.0 && elapsed < kTouchSwitchCooldownTime) {
+    LOG((CLOG_DEBUG1 "touch activation blocked by switch cooldown (%.2fs remaining)",
+         kTouchSwitchCooldownTime - elapsed));
+    return;
+  }
 
   if (m_active != m_primaryClient) {
     m_active->setJumpCursorPos(m_x, m_y);

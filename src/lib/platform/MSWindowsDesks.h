@@ -271,9 +271,6 @@ private:
   // true if mouse has entered the screen
   bool m_isOnScreen;
 
-  // suppress WM_MOUSEMOVE hider dismissal briefly after deskLeave
-  ULONGLONG m_deskLeaveTime;
-
   // our resources
   ATOM m_deskClass;
   HCURSOR m_cursor;
@@ -321,5 +318,5 @@ private:
   bool m_touchLifted = false;
   SInt32 m_pendingTouchX = 0;
   SInt32 m_pendingTouchY = 0;
-  ULONGLONG m_touchHideTime = 0;
+
 };
