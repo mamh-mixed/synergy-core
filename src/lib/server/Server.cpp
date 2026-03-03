@@ -1371,9 +1371,8 @@ void Server::handleTouchActivatedPrimaryEvent(const Event &event, void *)
 
     switchScreen(m_primaryClient, x, y, false);
 
-    // The hook eats the original touch event, so the window under the
-    // touch point never receives it. Explicitly activate that window.
     m_primaryClient->activateWindowAt(x, y);
+    m_primaryClient->fakeTouchClick(x, y);
 
     m_touchSwitchCooldown.reset();
     LOG((CLOG_DEBUG1 "touch switch cooldown started"));

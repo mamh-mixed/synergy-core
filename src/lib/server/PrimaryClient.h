@@ -84,6 +84,7 @@ public:
   void fakeInputEnd();
 
   void activateWindowAt(SInt32 x, SInt32 y);
+  void fakeTouchClick(SInt32 x, SInt32 y);
 
   //@}
   //! @name accessors

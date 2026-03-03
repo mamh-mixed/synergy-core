@@ -260,7 +260,4 @@ private:
   size_t m_maximumClipboardSize;
   deskflow::ClientArgs m_args;
   size_t m_resolvedAddressesCount = 0;
-  bool m_pendingTouchActivation = false;
-  SInt32 m_touchActivateX = 0;
-  SInt32 m_touchActivateY = 0;
 };

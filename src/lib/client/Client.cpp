@@ -246,15 +246,6 @@ void Client::enter(SInt32 xAbs, SInt32 yAbs, UInt32, KeyModifierMask mask, bool)
   m_screen->mouseMove(xAbs, yAbs);
   m_screen->enter(mask);
 
-  if (m_pendingTouchActivation) {
-    m_pendingTouchActivation = false;
-    ARCH->sleep(0.1);
-    LOG((CLOG_DEBUG1 "touch: replaying click at %d,%d (cursor at %d,%d)",
-         m_touchActivateX, m_touchActivateY, xAbs, yAbs));
-    m_screen->activateWindowAt(m_touchActivateX, m_touchActivateY);
-    m_screen->fakeTouchClick(m_touchActivateX, m_touchActivateY);
-  }
-
   if (m_sendFileThread) {
     StreamChunker::interruptFile();
     m_sendFileThread.reset(nullptr);
@@ -739,9 +730,6 @@ void Client::handleGrabInput(const Event &event, void *)
   IPrimaryScreen::MotionInfo *info = static_cast<IPrimaryScreen::MotionInfo *>(event.getData());
   if (m_server != NULL) {
     LOG((CLOG_DEBUG1 "requesting grab input at %d,%d", info->m_x, info->m_y));
-    m_pendingTouchActivation = true;
-    m_touchActivateX = info->m_x;
-    m_touchActivateY = info->m_y;
     m_server->grabInput(info->m_x, info->m_y);
   }
 }

@@ -316,4 +316,10 @@ private:
   bool m_stopOnDeskSwitch;
 
   std::unordered_map<HANDLE, HidTouchDevice> m_hidTouchDevices;
+
+  bool m_pendingTouchUp = false;
+  bool m_touchLifted = false;
+  SInt32 m_pendingTouchX = 0;
+  SInt32 m_pendingTouchY = 0;
+  ULONGLONG m_touchHideTime = 0;
 };
