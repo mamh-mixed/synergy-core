@@ -364,7 +364,6 @@ private:
   MSWindowsPowerManager m_powerManager;
 
   bool m_touchActivateScreen;
-  bool m_touchTriggeredEnter = false;
 
   Stopwatch m_touchDebounceTimer;
   static constexpr double kTouchDebounceTime = 0.15;
