@@ -624,20 +624,12 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
       }
     }
 
-    // When off-screen, prevent touch-synthesized mouse events from
-    // moving/showing the cursor. On secondary, eat ALL mouse events
-    // (the LL hook replaces SetCapture for mouse containment).
-    // On primary, only eat touch-synthesized events — regular mouse
-    // events must still reach mouseHookHandler for relay/switching.
-    if (!g_isOnScreen) {
-      if (!g_isPrimary) {
-        return 1;
-      }
-      bool isTouchSynthesized =
-          (info->dwExtraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE;
-      if (isTouchSynthesized) {
-        return 1;
-      }
+    // on secondary when off-screen, eat ALL mouse events (including
+    // touch-synthesized/injected). WM_POINTER reaches apps directly
+    // via the window system; letting synthesized mouse events through
+    // would move the cursor and make it visible.
+    if (!g_isPrimary && !g_isOnScreen) {
+      return 1;
     }
 
     bool const injected = info->flags & LLMHF_INJECTED;
