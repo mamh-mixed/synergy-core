@@ -624,15 +624,17 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
       }
     }
 
-    // on secondary when off-screen, eat ALL mouse events (including
-    // touch-synthesized/injected). WM_POINTER reaches apps directly
-    // via the window system; letting synthesized mouse events through
-    // would move the cursor and make it visible.
-    if (!g_isPrimary && !g_isOnScreen) {
+    bool const injected = info->flags & LLMHF_INJECTED;
+
+    // On secondary when off-screen, eat injected mouse events (which
+    // includes touch-synthesized ones marked LLMHF_INJECTED). This
+    // prevents the cursor from jumping to the touch point and becoming
+    // visible. Local (non-injected) mouse events pass through so the
+    // cursor can move normally (hidden via ShowCursor counter).
+    if (!g_isPrimary && !g_isOnScreen && injected) {
       return 1;
     }
 
-    bool const injected = info->flags & LLMHF_INJECTED;
     if (!g_isPrimary && injected) {
       return CallNextHookEx(g_mouseLL, code, wParam, lParam);
     }
