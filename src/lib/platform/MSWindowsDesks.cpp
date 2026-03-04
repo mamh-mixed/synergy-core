@@ -98,10 +98,6 @@ typedef LONG NTSTATUS;
 #define DESKFLOW_MSG_TOUCH_UPDATE DESKFLOW_HOOK_LAST_MSG + 14
 #define DESKFLOW_MSG_TOUCH_UP DESKFLOW_HOOK_LAST_MSG + 15
 
-// true when cursor is hidden due to touch injection — show on next mouse move.
-// accessed only from the desk thread, so no synchronization needed.
-static bool s_touchCursorHidden = false;
-
 static void send_keyboard_input(WORD wVk, WORD wScan, DWORD dwFlags)
 {
   INPUT inp;
@@ -687,7 +683,6 @@ void setCursorVisibility(bool visible)
 
 void MSWindowsDesks::deskEnter(Desk *desk)
 {
-  s_touchCursorHidden = false;
   registerTouchRawInput(desk->m_window, false);
 
   if (!m_isPrimary) {
@@ -747,7 +742,6 @@ void MSWindowsDesks::deskEnter(Desk *desk)
 
 void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
 {
-  s_touchCursorHidden = false;
   setCursorVisibility(false);
 
   if (m_isPrimary) {
@@ -1130,10 +1124,6 @@ void MSWindowsDesks::deskThread(void *vdesk)
       break;
 
     case DESKFLOW_MSG_FAKE_MOVE:
-      if (s_touchCursorHidden) {
-        setCursorVisibility(true);
-        s_touchCursorHidden = false;
-      }
       deskMouseMove(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
       break;
 
@@ -1142,14 +1132,6 @@ void MSWindowsDesks::deskThread(void *vdesk)
       break;
 
     case DESKFLOW_MSG_FAKE_TOUCH:
-      // On non-primary (client), hide cursor to emulate Windows touch behavior:
-      // touch hides cursor, cursor reappears on next FAKE_MOVE from server.
-      // On primary, don't hide — FAKE_MOVE never arrives (real mouse input),
-      // so the cursor would stay hidden.
-      if (!m_isPrimary) {
-        setCursorVisibility(false);
-        s_touchCursorHidden = true;
-      }
       deskFakeTouchClick(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
       break;
 
