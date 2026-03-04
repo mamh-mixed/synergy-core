@@ -438,6 +438,10 @@ void setCursorVisibility(bool visible);
 LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
   switch (msg) {
+  case WM_SETCURSOR:
+    SetCursor(NULL);
+    return TRUE;
+
   case WM_POINTERACTIVATE:
     return PA_NOACTIVATE;
 
@@ -813,9 +817,19 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
   } else {
     desk->m_foregroundWindow = getForegroundWindow();
 
-    // Keep WS_EX_TRANSPARENT — touch events pass through to apps.
-    // The LL hook eats real mouse events when off-screen (g_isOnScreen=false)
-    // and passively detects touch via TOUCH_SIGNATURE for screen switching.
+    // Remove WS_EX_TRANSPARENT on a 1x1 window at the cursor center so
+    // it receives WM_SETCURSOR and hides the cursor (secondaryDeskProc
+    // returns SetCursor(NULL)). The LL hook eats real mouse events when
+    // off-screen, pinning the cursor at center — so 1x1 is enough.
+    // Touch events at any other position pass through to apps.
+    LONG_PTR exStyle = GetWindowLongPtr(desk->m_window, GWL_EXSTYLE);
+    exStyle &= ~WS_EX_TRANSPARENT;
+    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle);
+
+    SetWindowPos(
+        desk->m_window, HWND_TOPMOST, m_xCenter, m_yCenter, 1, 1,
+        SWP_NOACTIVATE | SWP_SHOWWINDOW
+    );
 
     ARCH->sleep(0.03);
     deskMouseMove(m_xCenter, m_yCenter);
