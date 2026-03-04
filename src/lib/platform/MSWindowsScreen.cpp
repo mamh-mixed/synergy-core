@@ -319,6 +319,7 @@ void MSWindowsScreen::enter()
 
   // now on screen
   m_isOnScreen = true;
+  m_hook.setIsOnScreen(true);
   setupMouseKeys();
 }
 
@@ -375,6 +376,7 @@ void MSWindowsScreen::leave()
 
   // now off screen
   m_isOnScreen = false;
+  m_hook.setIsOnScreen(false);
 
   if (isDraggingStarted() && !m_isPrimary) {
     m_sendDragThread = new Thread(new TMethodJob<MSWindowsScreen>(this, &MSWindowsScreen::sendDragThread));

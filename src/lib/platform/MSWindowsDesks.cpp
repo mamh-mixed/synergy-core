@@ -812,25 +812,13 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
     // and WM_POINTER on the screen window instead.
   } else {
     desk->m_foregroundWindow = getForegroundWindow();
-    EnableWindow(desk->m_window, TRUE);
 
-    SetClassLongPtr(desk->m_window, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(m_cursor));
-
-    LONG_PTR exStyle = GetWindowLongPtr(desk->m_window, GWL_EXSTYLE);
-    exStyle = (exStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED;
-    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle);
-
-    SetWindowPos(desk->m_window, HWND_TOPMOST, m_x, m_y, m_w, m_h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
-    SetLayeredWindowAttributes(desk->m_window, 0, 1, LWA_ALPHA);
-
-    SetCapture(desk->m_window);
+    // Keep WS_EX_TRANSPARENT — touch events pass through to apps.
+    // The LL hook eats real mouse events when off-screen (g_isOnScreen=false)
+    // and passively detects touch via TOUCH_SIGNATURE for screen switching.
 
     ARCH->sleep(0.03);
     deskMouseMove(m_xCenter, m_yCenter);
-
-    // RIDEV_INPUTSINK removed: see comment above.
-    // Touch detection on secondary relies on WM_POINTER on the overlay
-    // window (secondaryDeskProc) and the LL hook (TOUCH_SIGNATURE).
   }
 }
 

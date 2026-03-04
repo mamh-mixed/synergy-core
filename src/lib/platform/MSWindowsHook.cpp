@@ -44,6 +44,7 @@ static BYTE g_keyState[256] = {0};
 static DWORD g_hookThread = 0;
 static bool g_fakeServerInput = false;
 static BOOL g_isPrimary = TRUE;
+static BOOL g_isOnScreen = TRUE;
 static bool g_touchActivateScreen = false;
 
 MSWindowsHook::MSWindowsHook()
@@ -107,6 +108,7 @@ int MSWindowsHook::init(DWORD threadID)
 
   // set defaults
   g_mode = kHOOK_DISABLE;
+  g_isOnScreen = TRUE;
   g_zoneSides = 0;
   g_zoneSize = 0;
   g_xScreen = 0;
@@ -157,6 +159,11 @@ void MSWindowsHook::setTouchActivateScreen(bool enabled)
 void MSWindowsHook::setIsPrimary(bool primary)
 {
   g_isPrimary = primary ? TRUE : FALSE;
+}
+
+void MSWindowsHook::setIsOnScreen(bool onScreen)
+{
+  g_isOnScreen = onScreen ? TRUE : FALSE;
 }
 
 static void keyboardGetState(BYTE keys[256], DWORD vkCode, bool kf_up)
@@ -620,6 +627,13 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
     bool const injected = info->flags & LLMHF_INJECTED;
     if (!g_isPrimary && injected) {
       return CallNextHookEx(g_mouseLL, code, wParam, lParam);
+    }
+
+    // on secondary, eat real mouse events when off-screen to prevent
+    // interaction while cursor is on server. touch-synthesized events
+    // (LLMHF_INJECTED) were already allowed through above.
+    if (!g_isPrimary && !g_isOnScreen) {
+      return 1;
     }
 
     SInt32 x = static_cast<SInt32>(info->pt.x);
