@@ -96,7 +96,7 @@ public:
   /*!
   Prepares a desk for when the cursor enters it.
   */
-  void enter();
+  void enter(bool touchTriggered = false);
 
   //! Notify of leaving a desk
   /*!
@@ -229,7 +229,7 @@ private:
   void deskMouseMove(SInt32 x, SInt32 y) const;
   void deskFakeTouchClick(SInt32 x, SInt32 y) const;
   void deskMouseRelativeMove(SInt32 dx, SInt32 dy) const;
-  void deskEnter(Desk *desk);
+  void deskEnter(Desk *desk, bool touchTriggered = false);
   void deskLeave(Desk *desk, HKL keyLayout);
   void deskThread(void *vdesk);
 

@@ -201,9 +201,9 @@ void MSWindowsDesks::disable()
   m_isOnScreen = m_isPrimary;
 }
 
-void MSWindowsDesks::enter()
+void MSWindowsDesks::enter(bool touchTriggered)
 {
-  sendMessage(DESKFLOW_MSG_ENTER, 0, 0);
+  sendMessage(DESKFLOW_MSG_ENTER, touchTriggered ? 1 : 0, 0);
 }
 
 void MSWindowsDesks::leave(HKL keyLayout)
@@ -685,7 +685,7 @@ void setCursorVisibility(bool visible)
   LOG_ERR("unable to set cursor visibility after %d attempts", attempts);
 }
 
-void MSWindowsDesks::deskEnter(Desk *desk)
+void MSWindowsDesks::deskEnter(Desk *desk, bool touchTriggered)
 {
   registerTouchRawInput(desk->m_window, false);
 
@@ -713,11 +713,19 @@ void MSWindowsDesks::deskEnter(Desk *desk)
   SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
 
+  // Always restore the ShowCursor counter (deskLeave decremented it).
   setCursorVisibility(true);
 
-  HCURSOR arrow = LoadCursor(NULL, IDC_ARROW);
-  SetClassLongPtr(desk->m_window, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(arrow));
-  SetCursor(arrow);
+  if (touchTriggered) {
+    // Touch-triggered enter: keep cursor invisible. SetCursor(NULL)
+    // draws nothing; the cursor becomes visible naturally when the
+    // user moves the mouse (apps set cursor shape via WM_SETCURSOR).
+    SetCursor(NULL);
+  } else {
+    HCURSOR arrow = LoadCursor(NULL, IDC_ARROW);
+    SetClassLongPtr(desk->m_window, GCLP_HCURSOR, reinterpret_cast<LONG_PTR>(arrow));
+    SetCursor(arrow);
+  }
 
   // restore the foreground window
   // XXX -- this raises the window to the top of the Z-order.  we
@@ -1111,7 +1119,7 @@ void MSWindowsDesks::deskThread(void *vdesk)
 
     case DESKFLOW_MSG_ENTER:
       m_isOnScreen = true;
-      deskEnter(desk);
+      deskEnter(desk, msg.wParam != 0);
       break;
 
     case DESKFLOW_MSG_LEAVE:
