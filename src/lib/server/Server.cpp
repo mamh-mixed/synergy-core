@@ -1383,7 +1383,6 @@ void Server::handleTouchActivatedPrimaryEvent(const Event &event, void *)
     switchScreen(m_primaryClient, x, y, false);
 
     m_primaryClient->activateWindowAt(x, y);
-    m_primaryClient->fakeTouchClick(x, y);
 
     m_touchSwitchCooldown.reset();
     LOG((CLOG_DEBUG1 "touch switch cooldown started"));
