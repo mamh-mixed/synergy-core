@@ -694,16 +694,16 @@ void MSWindowsDesks::deskEnter(Desk *desk)
   }
 
   bool touchEnter = false;
-  if (m_pendingTouchUp) {
-    // Inject immediately — don't defer to WM_POINTERUP because hiding
-    // the overlay (below) releases implicit pointer capture, so
-    // WM_POINTERUP never arrives at the hidden window.
-    // The injected touch uses a separate pointer ID from the real
-    // hardware touch, so there's no conflict even if the finger is
-    // still on the screen.
+  if (m_pendingTouchUp && m_touchLifted) {
+    // Finger already lifted — safe to inject now, no real touch conflict.
     touchEnter = true;
     m_pendingTouchUp = false;
     m_touchLifted = false;
+  } else if (m_pendingTouchUp) {
+    // Finger still down — defer injection to WM_POINTERUP / HID lift.
+    // Leave m_pendingTouchUp set so secondaryDeskProc WM_POINTERUP
+    // (or HID tip-off) triggers injection after the real touch ends.
+    LOG((CLOG_DEBUG "touch: deskEnter, finger still down, deferring injection"));
   }
 
   SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
