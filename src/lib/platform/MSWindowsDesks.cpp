@@ -98,6 +98,10 @@ typedef LONG NTSTATUS;
 #define DESKFLOW_MSG_TOUCH_UPDATE DESKFLOW_HOOK_LAST_MSG + 14
 #define DESKFLOW_MSG_TOUCH_UP DESKFLOW_HOOK_LAST_MSG + 15
 
+// true when cursor is hidden due to touch injection — show on next mouse move.
+// accessed only from the desk thread, so no synchronization needed.
+static bool s_touchCursorHidden = false;
+
 static void send_keyboard_input(WORD wVk, WORD wScan, DWORD dwFlags)
 {
   INPUT inp;
@@ -674,6 +678,7 @@ void setCursorVisibility(bool visible)
 
 void MSWindowsDesks::deskEnter(Desk *desk)
 {
+  s_touchCursorHidden = false;
   registerTouchRawInput(desk->m_window, false);
 
   if (!m_isPrimary) {
@@ -685,16 +690,20 @@ void MSWindowsDesks::deskEnter(Desk *desk)
   }
 
   bool touchEnter = false;
-  if (m_pendingTouchUp) {
+  if (m_pendingTouchUp && m_touchLifted) {
+    // Finger already lifted — safe to inject now, no real touch conflict.
     touchEnter = true;
     m_pendingTouchUp = false;
     m_touchLifted = false;
-    SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
-  } else {
-    SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+  } else if (m_pendingTouchUp) {
+    // Finger still down — defer injection to WM_POINTERUP / HID lift.
+    // Leave m_pendingTouchUp set so secondaryDeskProc WM_POINTERUP
+    // (or HID tip-off) triggers injection after the real touch ends.
+    LOG((CLOG_DEBUG "touch: deskEnter, finger still down, deferring injection"));
   }
+
+  SetWindowPos(desk->m_window, HWND_BOTTOM, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
 
   setCursorVisibility(true);
 
@@ -729,6 +738,7 @@ void MSWindowsDesks::deskEnter(Desk *desk)
 
 void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
 {
+  s_touchCursorHidden = false;
   setCursorVisibility(false);
 
   if (m_isPrimary) {
@@ -1111,6 +1121,10 @@ void MSWindowsDesks::deskThread(void *vdesk)
       break;
 
     case DESKFLOW_MSG_FAKE_MOVE:
+      if (s_touchCursorHidden) {
+        setCursorVisibility(true);
+        s_touchCursorHidden = false;
+      }
       deskMouseMove(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
       break;
 
@@ -1119,6 +1133,10 @@ void MSWindowsDesks::deskThread(void *vdesk)
       break;
 
     case DESKFLOW_MSG_FAKE_TOUCH:
+      // Hide cursor before injection to emulate normal Windows touch behavior:
+      // touch hides cursor, cursor reappears on next mouse movement.
+      setCursorVisibility(false);
+      s_touchCursorHidden = true;
       deskFakeTouchClick(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
       break;
 
