@@ -624,11 +624,11 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
       }
     }
 
-    // on secondary when off-screen, eat ALL mouse events (including
-    // touch-synthesized/injected). WM_POINTER reaches apps directly
-    // via the window system; letting synthesized mouse events through
-    // would move the cursor and make it visible.
-    if (!g_isPrimary && !g_isOnScreen) {
+    // when off-screen, eat ALL mouse events (including touch-synthesized/
+    // injected). WM_POINTER reaches apps directly via the window system;
+    // letting synthesized mouse events through would move the cursor and
+    // make it visible.
+    if (!g_isOnScreen) {
       return 1;
     }
 
