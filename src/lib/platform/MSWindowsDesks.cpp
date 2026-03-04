@@ -477,9 +477,10 @@ LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM w
       SInt32 y = self->m_pendingTouchY;
       if (self->m_isOnScreen) {
         self->m_pendingTouchUp = false;
+        self->m_touchLifted = false;
         SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_HIDEWINDOW);
-        LOG((CLOG_DEBUG "touch: finger up, hider hidden, injecting at %d,%d", x, y));
+        LOG((CLOG_DEBUG "touch: finger up after enter, injecting at %d,%d", x, y));
         PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_FAKE_TOUCH,
                           static_cast<WPARAM>(x), static_cast<LPARAM>(y));
       } else {
@@ -566,8 +567,16 @@ void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
   }
 
   static bool touchInitialized = false;
-  if (!touchInitialized) {
+  static bool touchInitAttempted = false;
+  if (!touchInitAttempted) {
+    touchInitAttempted = true;
     touchInitialized = InitializeTouchInjection(2, TOUCH_FEEDBACK_NONE) != 0;
+    if (touchInitialized) {
+      LOG((CLOG_DEBUG "touch: InitializeTouchInjection succeeded"));
+    } else {
+      LOG((CLOG_WARN "touch: InitializeTouchInjection failed, error=%lu, will use mouse fallback",
+           GetLastError()));
+    }
   }
 
   if (touchInitialized) {
@@ -1133,10 +1142,14 @@ void MSWindowsDesks::deskThread(void *vdesk)
       break;
 
     case DESKFLOW_MSG_FAKE_TOUCH:
-      // Hide cursor before injection to emulate normal Windows touch behavior:
-      // touch hides cursor, cursor reappears on next mouse movement.
-      setCursorVisibility(false);
-      s_touchCursorHidden = true;
+      // On non-primary (client), hide cursor to emulate Windows touch behavior:
+      // touch hides cursor, cursor reappears on next FAKE_MOVE from server.
+      // On primary, don't hide — FAKE_MOVE never arrives (real mouse input),
+      // so the cursor would stay hidden.
+      if (!m_isPrimary) {
+        setCursorVisibility(false);
+        s_touchCursorHidden = true;
+      }
       deskFakeTouchClick(static_cast<SInt32>(msg.wParam), static_cast<SInt32>(msg.lParam));
       break;
 
