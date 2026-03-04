@@ -805,7 +805,11 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
       }
     }
 
-    registerTouchRawInput(desk->m_window, true);
+    // RIDEV_INPUTSINK removed: it consumes raw HID digitizer data before the
+    // WM_POINTER pipeline can generate pointer messages, causing ~80% of
+    // WM_POINTER TOUCH events to be silently dropped system-wide.
+    // Touch detection on primary relies on the LL hook (TOUCH_SIGNATURE)
+    // and WM_POINTER on the screen window instead.
   } else {
     desk->m_foregroundWindow = getForegroundWindow();
     EnableWindow(desk->m_window, TRUE);
@@ -824,7 +828,9 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
     ARCH->sleep(0.03);
     deskMouseMove(m_xCenter, m_yCenter);
 
-    registerTouchRawInput(desk->m_window, true);
+    // RIDEV_INPUTSINK removed: see comment above.
+    // Touch detection on secondary relies on WM_POINTER on the overlay
+    // window (secondaryDeskProc) and the LL hook (TOUCH_SIGNATURE).
   }
 }
 

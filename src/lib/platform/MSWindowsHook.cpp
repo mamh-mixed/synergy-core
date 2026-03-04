@@ -593,7 +593,11 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
 
     // must run before the injected check: Windows marks
     // touch-synthesized mouse events as injected (LLMHF_INJECTED).
-    if (g_touchActivateScreen && g_mode == kHOOK_RELAY_EVENTS) {
+    // on primary: only detect touch in relay mode (cursor off-screen).
+    // on secondary (client): always detect touch — g_mode is never set
+    // to RELAY on secondary screens, so the mode check alone would
+    // prevent touch detection from ever firing on the client.
+    if (g_touchActivateScreen && (g_mode == kHOOK_RELAY_EVENTS || !g_isPrimary)) {
       bool isTouchEvent = (info->dwExtraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE;
 
       if (wParam == WM_LBUTTONDOWN) {
