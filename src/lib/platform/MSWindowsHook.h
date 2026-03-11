@@ -49,4 +49,8 @@ public:
   static int installScreenSaver();
 
   static int uninstallScreenSaver();
+
+  void setAnchoredKeys(const UInt32 mask[8]);
+  void setAnchoredCombos(const UInt8 *data, int count);
+  void setAnchoredKeysFKeys(UInt32 fKeyBitmask);
 };

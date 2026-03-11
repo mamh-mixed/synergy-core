@@ -21,6 +21,8 @@
 #include "deskflow/XScreen.h"
 #include "deskflow/protocol_types.h"
 
+#include <cstring>
+
 static const char *g_name = "dfwhook";
 
 static DWORD g_processID = 0;
@@ -44,6 +46,55 @@ static BYTE g_keyState[256] = {0};
 static DWORD g_hookThread = 0;
 static bool g_fakeServerInput = false;
 static BOOL g_isPrimary = TRUE;
+static UInt32 g_anchoredKeysMask[8] = {};
+
+struct AnchoredCombo
+{
+  UInt8 modifiers;
+  UInt8 vk;
+};
+static const int kMaxAnchoredCombos = 32;
+static AnchoredCombo g_anchoredCombos[kMaxAnchoredCombos] = {};
+static int g_anchoredComboCount = 0;
+
+static const UInt8 kModShift = 0x01;
+static const UInt8 kModCtrl = 0x02;
+static const UInt8 kModAlt = 0x04;
+static const UInt8 kModWin = 0x08;
+
+struct PendingMod
+{
+  DWORD vk;
+  LPARAM lParam;
+  UInt8 modBit;
+};
+static PendingMod g_pendingMods[4] = {};
+static int g_pendingModCount = 0;
+static UInt8 g_pendingModBits = 0;
+static UInt8 g_comboFiredModBits = 0;
+
+static UInt8 modBitForVk(DWORD vk)
+{
+  switch (vk) {
+  case VK_SHIFT:
+  case VK_LSHIFT:
+  case VK_RSHIFT:
+    return kModShift;
+  case VK_CONTROL:
+  case VK_LCONTROL:
+  case VK_RCONTROL:
+    return kModCtrl;
+  case VK_MENU:
+  case VK_LMENU:
+  case VK_RMENU:
+    return kModAlt;
+  case VK_LWIN:
+  case VK_RWIN:
+    return kModWin;
+  default:
+    return 0;
+  }
+}
 
 MSWindowsHook::MSWindowsHook()
 {
@@ -148,6 +199,32 @@ void MSWindowsHook::setMode(EHookMode mode)
   g_mode = mode;
 }
 
+void MSWindowsHook::setAnchoredKeys(const UInt32 mask[8])
+{
+  memcpy(g_anchoredKeysMask, mask, sizeof(g_anchoredKeysMask));
+}
+
+void MSWindowsHook::setAnchoredCombos(const UInt8 *data, int count)
+{
+  g_anchoredComboCount = (count > kMaxAnchoredCombos) ? kMaxAnchoredCombos : count;
+  for (int i = 0; i < g_anchoredComboCount; ++i) {
+    g_anchoredCombos[i].modifiers = data[i * 2];
+    g_anchoredCombos[i].vk = data[i * 2 + 1];
+  }
+}
+
+void MSWindowsHook::setAnchoredKeysFKeys(UInt32 fKeyBitmask)
+{
+  UInt32 mask[8] = {};
+  for (int i = 0; i < 24; ++i) {
+    if (fKeyBitmask & (1u << i)) {
+      int vk = VK_F1 + i;
+      mask[vk / 32] |= (1u << (vk % 32));
+    }
+  }
+  setAnchoredKeys(mask);
+}
+
 static void keyboardGetState(BYTE keys[256], DWORD vkCode, bool kf_up)
 {
   // we have to use GetAsyncKeyState() rather than GetKeyState() because
@@ -190,6 +267,50 @@ static void keyboardGetState(BYTE keys[256], DWORD vkCode, bool kf_up)
 static WPARAM makeKeyMsg(UINT virtKey, WCHAR wc, bool noAltGr)
 {
   return MAKEWPARAM((WORD)wc, MAKEWORD(virtKey & 0xff, noAltGr ? 1 : 0));
+}
+
+static void flushPendingMods()
+{
+  for (int i = 0; i < g_pendingModCount; i++) {
+    WPARAM charAndVirtKey = makeKeyMsg((UINT)g_pendingMods[i].vk, 0, false);
+    PostThreadMessage(g_threadID, DESKFLOW_MSG_KEY, charAndVirtKey, g_pendingMods[i].lParam);
+  }
+  g_pendingModCount = 0;
+  g_pendingModBits = 0;
+}
+
+static void injectComboLocally(int triggerVk, WORD triggerScanCode)
+{
+  INPUT inputs[8] = {};
+  int idx = 0;
+
+  inputs[idx].type = INPUT_KEYBOARD;
+  inputs[idx].ki.wVk = VK_CANCEL;
+  inputs[idx].ki.wScan = 0;
+  inputs[idx].ki.dwFlags = 0;
+  idx++;
+
+  for (int i = 0; i < g_pendingModCount; i++) {
+    inputs[idx].type = INPUT_KEYBOARD;
+    inputs[idx].ki.wVk = (WORD)g_pendingMods[i].vk;
+    inputs[idx].ki.wScan = (WORD)MapVirtualKey(g_pendingMods[i].vk, MAPVK_VK_TO_VSC);
+    inputs[idx].ki.dwFlags = 0;
+    idx++;
+  }
+
+  inputs[idx].type = INPUT_KEYBOARD;
+  inputs[idx].ki.wVk = (WORD)triggerVk;
+  inputs[idx].ki.wScan = triggerScanCode;
+  inputs[idx].ki.dwFlags = 0;
+  idx++;
+
+  inputs[idx].type = INPUT_KEYBOARD;
+  inputs[idx].ki.wVk = VK_CANCEL;
+  inputs[idx].ki.wScan = 0;
+  inputs[idx].ki.dwFlags = KEYEVENTF_KEYUP;
+  idx++;
+
+  SendInput(idx, inputs, sizeof(INPUT));
 }
 
 static void setDeadKey(WCHAR wc[], int size, UINT flags)
@@ -235,6 +356,110 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
   if (g_fakeServerInput) {
     PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xfe000000u | wParam, lParam);
     return false;
+  }
+
+  if (g_mode == kHOOK_RELAY_EVENTS) {
+    UInt32 vk = static_cast<UInt32>(vkCode);
+
+    if (vk < 256 && (g_anchoredKeysMask[vk / 32] & (1u << (vk % 32))) != 0) {
+      if ((lParam & 0x80000000u) == 0 && (lParam & 0x40000000u) == 0)
+        PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk, lParam);
+      return false;
+    }
+
+    if (g_anchoredComboCount > 0 && vk < 256) {
+      bool isKeyDown = (lParam & 0x80000000u) == 0;
+      UInt8 modBit = modBitForVk(vk);
+
+      // Modifier UP after combo fired: pass through locally, don't relay
+      if (!isKeyDown && modBit != 0 && (g_comboFiredModBits & modBit)) {
+        g_comboFiredModBits &= ~modBit;
+        return false;
+      }
+
+      // While combo is active, repeat combo trigger stays local
+      if (isKeyDown && modBit == 0 && g_comboFiredModBits != 0) {
+        for (int i = 0; i < g_anchoredComboCount; ++i) {
+          if (g_anchoredCombos[i].vk == vk && g_anchoredCombos[i].modifiers == g_comboFiredModBits) {
+            WORD sc = (WORD)((lParam >> 16) & 0x1FF);
+            INPUT inputs[3] = {};
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].ki.wVk = VK_CANCEL;
+            inputs[0].ki.dwFlags = 0;
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].ki.wVk = (WORD)vk;
+            inputs[1].ki.wScan = sc;
+            inputs[1].ki.dwFlags = 0;
+            inputs[2].type = INPUT_KEYBOARD;
+            inputs[2].ki.wVk = VK_CANCEL;
+            inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(3, inputs, sizeof(INPUT));
+            PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk | (g_comboFiredModBits << 8), lParam);
+            return true;
+          }
+        }
+      }
+
+      // While combo is active, trigger UP stays local
+      if (!isKeyDown && modBit == 0 && g_comboFiredModBits != 0) {
+        for (int i = 0; i < g_anchoredComboCount; ++i) {
+          if (g_anchoredCombos[i].vk == vk)
+            return false;
+        }
+      }
+
+      // While combo is active, non-combo keys also stay local
+      if (g_comboFiredModBits != 0)
+        return false;
+
+      // Modifier DOWN: hold it if used in any anchored combo
+      if (isKeyDown && modBit != 0) {
+        if (g_pendingModBits & modBit)
+          return true; // already pending (repeat), eat it
+
+        bool usedInCombo = false;
+        for (int i = 0; i < g_anchoredComboCount; ++i) {
+          if (g_anchoredCombos[i].modifiers & modBit) {
+            usedInCombo = true;
+            break;
+          }
+        }
+        if (usedInCombo && g_pendingModCount < 4) {
+          g_pendingMods[g_pendingModCount].vk = vk;
+          g_pendingMods[g_pendingModCount].lParam = lParam;
+          g_pendingMods[g_pendingModCount].modBit = modBit;
+          g_pendingModCount++;
+          g_pendingModBits |= modBit;
+          return true; // eat it, don't relay yet
+        }
+      }
+
+      // Modifier UP while pending: no combo arrived, flush to client
+      if (!isKeyDown && modBit != 0 && (g_pendingModBits & modBit)) {
+        flushPendingMods();
+        // fall through to relay this UP normally
+      }
+
+      // Non-modifier key while mods are pending
+      if (modBit == 0 && g_pendingModBits != 0) {
+        if (isKeyDown) {
+          for (int i = 0; i < g_anchoredComboCount; ++i) {
+            if (g_anchoredCombos[i].vk == vk && g_anchoredCombos[i].modifiers == g_pendingModBits) {
+              WORD sc = (WORD)((lParam >> 16) & 0x1FF);
+              injectComboLocally(vk, sc);
+              g_comboFiredModBits = g_pendingModBits;
+              g_pendingModCount = 0;
+              g_pendingModBits = 0;
+              PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk | (g_comboFiredModBits << 8), lParam);
+              return true; // eat the real trigger
+            }
+          }
+        }
+        // No combo match, flush pending mods to client
+        flushPendingMods();
+        // fall through to relay this key normally
+      }
+    }
   }
 
   // VK_RSHIFT may be sent with an extended scan code but right shift
@@ -631,7 +856,8 @@ EHookResult MSWindowsHook::install()
 #endif
 
   // check that we got all the hooks we wanted
-  if ((g_mouseLL == NULL) ||
+  if (
+      (g_mouseLL == NULL) ||
 #if !NO_GRAB_KEYBOARD
       (g_keyboardLL == NULL)
 #endif
