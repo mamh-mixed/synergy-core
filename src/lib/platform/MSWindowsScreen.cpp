@@ -1640,6 +1640,8 @@ void MSWindowsScreen::updateScreenShape()
 
   // tell the desks
   m_desks->setShape(m_x, m_y, m_w, m_h, m_xCenter, m_yCenter, m_multimon);
+
+  m_hook.setCursorCenter(m_xCenter, m_yCenter);
 }
 
 void MSWindowsScreen::handleFixes(const Event &, void *)
