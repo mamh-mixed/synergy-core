@@ -72,6 +72,8 @@ static PendingMod g_pendingMods[4] = {};
 static int g_pendingModCount = 0;
 static UInt8 g_pendingModBits = 0;
 static UInt8 g_comboFiredModBits = 0;
+static HWND g_anchorForeground = NULL;
+static HWND g_anchorDeskWindow = NULL;
 
 static UInt8 modBitForVk(DWORD vk)
 {
@@ -225,6 +227,12 @@ void MSWindowsHook::setAnchoredKeysFKeys(UInt32 fKeyBitmask)
   setAnchoredKeys(mask);
 }
 
+void MSWindowsHook::setAnchorTargets(HWND foregroundWindow, HWND deskWindow)
+{
+  g_anchorForeground = foregroundWindow;
+  g_anchorDeskWindow = deskWindow;
+}
+
 static void keyboardGetState(BYTE keys[256], DWORD vkCode, bool kf_up)
 {
   // we have to use GetAsyncKeyState() rather than GetKeyState() because
@@ -281,14 +289,8 @@ static void flushPendingMods()
 
 static void injectComboLocally(int triggerVk, WORD triggerScanCode)
 {
-  INPUT inputs[8] = {};
+  INPUT inputs[16] = {};
   int idx = 0;
-
-  inputs[idx].type = INPUT_KEYBOARD;
-  inputs[idx].ki.wVk = VK_CANCEL;
-  inputs[idx].ki.wScan = 0;
-  inputs[idx].ki.dwFlags = 0;
-  idx++;
 
   for (int i = 0; i < g_pendingModCount; i++) {
     inputs[idx].type = INPUT_KEYBOARD;
@@ -305,12 +307,36 @@ static void injectComboLocally(int triggerVk, WORD triggerScanCode)
   idx++;
 
   inputs[idx].type = INPUT_KEYBOARD;
-  inputs[idx].ki.wVk = VK_CANCEL;
-  inputs[idx].ki.wScan = 0;
+  inputs[idx].ki.wVk = (WORD)triggerVk;
+  inputs[idx].ki.wScan = triggerScanCode;
   inputs[idx].ki.dwFlags = KEYEVENTF_KEYUP;
   idx++;
 
-  SendInput(idx, inputs, sizeof(INPUT));
+  for (int i = g_pendingModCount - 1; i >= 0; i--) {
+    inputs[idx].type = INPUT_KEYBOARD;
+    inputs[idx].ki.wVk = (WORD)g_pendingMods[i].vk;
+    inputs[idx].ki.wScan = (WORD)MapVirtualKey(g_pendingMods[i].vk, MAPVK_VK_TO_VSC);
+    inputs[idx].ki.dwFlags = KEYEVENTF_KEYUP;
+    idx++;
+  }
+
+  HWND target = g_anchorForeground;
+  HWND deskWnd = g_anchorDeskWindow;
+  if (target != NULL && deskWnd != NULL) {
+    DWORD deskThread = GetWindowThreadProcessId(deskWnd, NULL);
+    DWORD targetThread = GetWindowThreadProcessId(target, NULL);
+    AttachThreadInput(targetThread, deskThread, TRUE);
+    SetForegroundWindow(target);
+    AttachThreadInput(targetThread, deskThread, FALSE);
+
+    SendInput(idx, inputs, sizeof(INPUT));
+
+    AttachThreadInput(targetThread, deskThread, TRUE);
+    SetForegroundWindow(deskWnd);
+    AttachThreadInput(targetThread, deskThread, FALSE);
+  } else {
+    SendInput(idx, inputs, sizeof(INPUT));
+  }
 }
 
 static void setDeadKey(WCHAR wc[], int size, UINT flags)
@@ -374,6 +400,9 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
       // Modifier UP after combo fired: pass through locally, don't relay
       if (!isKeyDown && modBit != 0 && (g_comboFiredModBits & modBit)) {
         g_comboFiredModBits &= ~modBit;
+        g_keyState[vk] = 0;
+        if (vk == VK_LSHIFT || vk == VK_RSHIFT)
+          g_keyState[VK_SHIFT] = g_keyState[VK_LSHIFT] | g_keyState[VK_RSHIFT];
         return false;
       }
 
@@ -430,6 +459,9 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
           g_pendingMods[g_pendingModCount].modBit = modBit;
           g_pendingModCount++;
           g_pendingModBits |= modBit;
+          g_keyState[vk] = 0x80;
+          if (vk == VK_LSHIFT || vk == VK_RSHIFT)
+            g_keyState[VK_SHIFT] = 0x80;
           return true; // eat it, don't relay yet
         }
       }

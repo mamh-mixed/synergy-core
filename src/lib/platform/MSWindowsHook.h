@@ -53,4 +53,5 @@ public:
   void setAnchoredKeys(const UInt32 mask[8]);
   void setAnchoredCombos(const UInt8 *data, int count);
   void setAnchoredKeysFKeys(UInt32 fKeyBitmask);
+  static void setAnchorTargets(HWND foregroundWindow, HWND deskWindow);
 };
