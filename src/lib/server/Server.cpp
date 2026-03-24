@@ -1382,7 +1382,10 @@ void Server::handleTouchActivatedPrimaryEvent(const Event &event, void *)
 
     switchScreen(m_primaryClient, x, y, false);
 
-    m_primaryClient->activateWindowAt(x, y);
+    // HACK: Win10 — activateWindowAt removed; the natural touch click (WM_LBUTTONDOWN)
+    // is now delivered by the OS directly via the hook change in mouseLLHook.
+    // On Win11, activateWindowAt brought the target window to foreground before injection;
+    // natural delivery may not always activate the target window.
 
     m_touchSwitchCooldown.reset();
     LOG((CLOG_DEBUG1 "touch switch cooldown started"));

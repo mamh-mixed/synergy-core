@@ -618,20 +618,28 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
         LOG((CLOG_DEBUG "hook: touch at %d,%d posting DESKFLOW_MSG_TOUCH", x, y));
         PostThreadMessage(g_threadID, DESKFLOW_MSG_TOUCH, x, y);
         if (g_isPrimary) {
-          LOG((CLOG_DEBUG "hook: eating touch event (relay mode)"));
-          return 1;
+          // HACK: Win10 — pass touch through to local app instead of eating and re-injecting.
+          // CallNextHookEx allows local delivery; bypassing mouseHookHandler prevents relay
+          // to the client. On Win11 this changes touch delivery behaviour — test for regressions.
+          LOG((CLOG_DEBUG "hook: passing touch event to local app (skip relay)"));
+          return CallNextHookEx(g_mouseLL, code, wParam, lParam);
         }
       }
     }
 
     bool const injected = info->flags & LLMHF_INJECTED;
+    // HACK: Win10 — let touch-synthesized injected events through even when off-screen,
+    // so the cursor moves to the touch position and WM_LBUTTONDOWN reaches the right app.
+    // Non-touch injected events (synergy's own cursor control) are still eaten.
+    // On Win11, WM_POINTER delivers the click independently; this path may double-click.
+    bool const isTouchSig = (info->dwExtraInfo & TOUCH_SIGNATURE_MASK) == TOUCH_SIGNATURE;
 
     // On secondary when off-screen, eat injected mouse events (which
     // includes touch-synthesized ones marked LLMHF_INJECTED). This
     // prevents the cursor from jumping to the touch point and becoming
     // visible. Local (non-injected) mouse events pass through so the
     // cursor can move normally (hidden via ShowCursor counter).
-    if (!g_isPrimary && !g_isOnScreen && injected) {
+    if (!g_isPrimary && !g_isOnScreen && injected && !isTouchSig) {
       return 1;
     }
 

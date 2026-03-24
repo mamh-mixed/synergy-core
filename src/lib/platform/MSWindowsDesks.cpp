@@ -817,14 +817,11 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
   } else {
     desk->m_foregroundWindow = getForegroundWindow();
 
-    // Remove WS_EX_TRANSPARENT on a 1x1 window at the cursor center so
-    // it receives WM_SETCURSOR and hides the cursor (secondaryDeskProc
-    // returns SetCursor(NULL)). The LL hook eats real mouse events when
-    // off-screen, pinning the cursor at center — so 1x1 is enough.
-    // Touch events at any other position pass through to apps.
-    LONG_PTR exStyle = GetWindowLongPtr(desk->m_window, GWL_EXSTYLE);
-    exStyle &= ~WS_EX_TRANSPARENT;
-    SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle);
+    // HACK: Win10 — keep WS_EX_TRANSPARENT on the desk window so touch events
+    // pass through it naturally to apps underneath (even near screen center).
+    // On Win11, stripping WS_EX_TRANSPARENT was required for WM_POINTER delivery
+    // to secondaryDeskProc; removing this strip breaks that Win11 mechanism.
+    // Cursor is hidden via ShowCursor(FALSE) in setCursorVisibility, not WM_SETCURSOR.
 
     SetWindowPos(
         desk->m_window, HWND_TOPMOST, m_xCenter, m_yCenter, 1, 1,
