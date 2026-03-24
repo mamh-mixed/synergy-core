@@ -817,26 +817,17 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
   } else {
     desk->m_foregroundWindow = getForegroundWindow();
 
-    // HACK(win10): Win10 uses strict 1px hit testing for WM_POINTER, so a 1x1
-    // window at cursor center would only receive WM_POINTERDOWN if the touch
-    // lands at exactly that pixel — which never happens for arbitrary app touches.
-    // Win11 inflates touch contact areas so the 1x1 window incidentally gets
-    // WM_POINTER, but Win10 does not. Expanding to full screen guarantees
-    // WM_POINTERDOWN is delivered for any touch position on Win10.
-    // WS_EX_LAYERED + alpha=1 keeps the window invisible (0.4% opacity) while
-    // remaining above Win10's hit-test threshold. WS_EX_TRANSPARENT is removed
-    // so pointer events are not forwarded through.
+    // Remove WS_EX_TRANSPARENT on a 1x1 window at the cursor center so
+    // it receives WM_SETCURSOR and hides the cursor (secondaryDeskProc
+    // returns SetCursor(NULL)). The LL hook eats real mouse events when
+    // off-screen, pinning the cursor at center — so 1x1 is enough.
+    // Touch events at any other position pass through to apps.
     LONG_PTR exStyle = GetWindowLongPtr(desk->m_window, GWL_EXSTYLE);
-    exStyle = (exStyle | WS_EX_LAYERED) & ~WS_EX_TRANSPARENT;
+    exStyle &= ~WS_EX_TRANSPARENT;
     SetWindowLongPtr(desk->m_window, GWL_EXSTYLE, exStyle);
-    SetLayeredWindowAttributes(desk->m_window, 0, 1, LWA_ALPHA);
 
-    SInt32 sx = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    SInt32 sy = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    SInt32 sw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    SInt32 sh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
     SetWindowPos(
-        desk->m_window, HWND_TOPMOST, sx, sy, sw, sh,
+        desk->m_window, HWND_TOPMOST, m_xCenter, m_yCenter, 1, 1,
         SWP_NOACTIVATE | SWP_SHOWWINDOW
     );
 
