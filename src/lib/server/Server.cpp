@@ -1384,13 +1384,6 @@ void Server::handleTouchActivatedPrimaryEvent(const Event &event, void *)
 
     m_primaryClient->activateWindowAt(x, y);
 
-    // HACK(win10): On Win10, eating WM_LBUTTONDOWN in the LL hook suppresses the
-    // corresponding WM_POINTER, so the app never receives the touch click. Re-inject
-    // it here after the screen switch. On Win11, WM_POINTER fires independently of
-    // WM_LBUTTONDOWN, so the app already received the click naturally — this call
-    // will cause a double-click on Win11.
-    m_primaryClient->fakeTouchClick(x, y);
-
     m_touchSwitchCooldown.reset();
     LOG((CLOG_DEBUG1 "touch switch cooldown started"));
   }
