@@ -624,6 +624,13 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
           LOG((CLOG_DEBUG "hook: passing touch event to local app (skip relay)"));
           return CallNextHookEx(g_mouseLL, code, wParam, lParam);
         }
+      } else if (isTouchEvent && wParam == WM_LBUTTONUP && g_isPrimary) {
+        // HACK: Win10 — also pass touch UP through so the click sequence is complete.
+        // Without this, WM_LBUTTONUP falls through to mouseHookHandler which eats it in
+        // relay mode, leaving the target window in a stuck-button-down state. Explorer and
+        // Start Menu then interpret subsequent taps as Ctrl/Shift+click.
+        LOG((CLOG_DEBUG "hook: passing touch UP to local app (skip relay)"));
+        return CallNextHookEx(g_mouseLL, code, wParam, lParam);
       }
     }
 
