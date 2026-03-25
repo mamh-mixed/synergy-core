@@ -198,6 +198,11 @@ void MSWindowsHook::setMode(EHookMode mode)
     // no change
     return;
   }
+  if (g_mode == kHOOK_RELAY_EVENTS) {
+    g_pendingModCount = 0;
+    g_pendingModBits = 0;
+    g_comboFiredModBits = 0;
+  }
   g_mode = mode;
 }
 
@@ -388,26 +393,42 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
     UInt32 vk = static_cast<UInt32>(vkCode);
 
     if (vk < 256 && (g_anchoredKeysMask[vk / 32] & (1u << (vk % 32))) != 0) {
-      if ((lParam & 0x80000000u) == 0 && (lParam & 0x40000000u) == 0)
-        PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk, lParam);
-      return false;
+      bool isComboTrigger = false;
+      for (int i = 0; i < g_anchoredComboCount; ++i) {
+        if (g_anchoredCombos[i].vk == vk) {
+          isComboTrigger = true;
+          break;
+        }
+      }
+      if (!isComboTrigger) {
+        if ((lParam & 0x80000000u) == 0 && (lParam & 0x40000000u) == 0)
+          PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk, lParam);
+        return false;
+      }
     }
 
     if (g_anchoredComboCount > 0 && vk < 256) {
       bool isKeyDown = (lParam & 0x80000000u) == 0;
+      bool isInjected = (lParam & 0x40000000u) != 0;
       UInt8 modBit = modBitForVk(vk);
 
-      // Modifier UP after combo fired: pass through locally, don't relay
+      // Modifier UP after combo fired: pass through locally, don't relay.
+      // Only clear combo state for physical (non-injected) UPs so the
+      // combo stays active while injectComboLocally's synthetic events
+      // are processed. The combo ends when the user physically releases.
       if (!isKeyDown && modBit != 0 && (g_comboFiredModBits & modBit)) {
-        g_comboFiredModBits &= ~modBit;
+        if (!isInjected) {
+          g_comboFiredModBits &= ~modBit;
+        }
         g_keyState[vk] = 0;
         if (vk == VK_LSHIFT || vk == VK_RSHIFT)
           g_keyState[VK_SHIFT] = g_keyState[VK_LSHIFT] | g_keyState[VK_RSHIFT];
         return false;
       }
 
-      // While combo is active, repeat combo trigger stays local
-      if (isKeyDown && modBit == 0 && g_comboFiredModBits != 0) {
+      // While combo is active, repeat combo trigger stays local.
+      // Skip injected events to avoid an infinite SendInput loop.
+      if (isKeyDown && !isInjected && modBit == 0 && g_comboFiredModBits != 0) {
         for (int i = 0; i < g_anchoredComboCount; ++i) {
           if (g_anchoredCombos[i].vk == vk && g_anchoredCombos[i].modifiers == g_comboFiredModBits) {
             WORD sc = (WORD)((lParam >> 16) & 0x1FF);
@@ -490,6 +511,11 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
         // No combo match, flush pending mods to client
         flushPendingMods();
         // fall through to relay this key normally
+      }
+
+      if (g_pendingModBits == 0 && g_comboFiredModBits == 0 &&
+          vk < 256 && (g_anchoredKeysMask[vk / 32] & (1u << (vk % 32))) != 0) {
+        return false;
       }
     }
   }
@@ -715,9 +741,9 @@ static LRESULT CALLBACK keyboardLLHook(int code, WPARAM wParam, LPARAM lParam)
     if (info->flags & LLKHF_UP) {
       lParam |= (1lu << 31); // transition
     }
-    // FIXME -- bit 30 should be set if key was already down but
-    // we don't know that info.  as a result we'll never generate
-    // key repeat events.
+    if (info->flags & LLKHF_INJECTED) {
+      lParam |= (1lu << 30); // injected event marker
+    }
 
     // handle the message
     if (keyboardHookHandler(wParam, lParam)) {
