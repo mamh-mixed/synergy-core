@@ -98,6 +98,8 @@ typedef LONG NTSTATUS;
 #define DESKFLOW_MSG_TOUCH_UPDATE DESKFLOW_HOOK_LAST_MSG + 14
 #define DESKFLOW_MSG_TOUCH_UP DESKFLOW_HOOK_LAST_MSG + 15
 
+MSWindowsDesks *MSWindowsDesks::s_instance = NULL;
+
 static void send_keyboard_input(WORD wVk, WORD wScan, DWORD dwFlags)
 {
   INPUT inp;
@@ -153,6 +155,7 @@ MSWindowsDesks::MSWindowsDesks(
       m_stopOnDeskSwitch(stopOnDeskSwitch)
 {
 
+  s_instance = this;
   m_cursor = createBlankCursor();
   m_deskClass = createDeskWindowClass(m_isPrimary);
   m_keyLayout = AppUtilWindows::instance().getCurrentKeyboardLayout();
@@ -161,10 +164,15 @@ MSWindowsDesks::MSWindowsDesks(
 
 MSWindowsDesks::~MSWindowsDesks()
 {
+  if (m_foregroundHook != NULL) {
+    UnhookWinEvent(m_foregroundHook);
+    m_foregroundHook = NULL;
+  }
   disable();
   destroyClass(m_deskClass);
   destroyCursor(m_cursor);
   delete m_updateKeys;
+  s_instance = NULL;
 }
 
 void MSWindowsDesks::enable()
@@ -566,51 +574,11 @@ void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
     }
   }
 
-  static bool touchInitialized = false;
-  static bool touchInitAttempted = false;
-  if (!touchInitAttempted) {
-    touchInitAttempted = true;
-    touchInitialized = InitializeTouchInjection(2, TOUCH_FEEDBACK_NONE) != 0;
-    if (touchInitialized) {
-      LOG((CLOG_DEBUG "touch: InitializeTouchInjection succeeded"));
-    } else {
-      LOG((CLOG_WARN "touch: InitializeTouchInjection failed, error=%lu, will use mouse fallback",
-           GetLastError()));
-    }
-  }
-
-  if (touchInitialized) {
-    POINTER_TOUCH_INFO contact = {};
-    contact.pointerInfo.pointerType = PT_TOUCH;
-    contact.pointerInfo.pointerId = 1;
-    contact.pointerInfo.ptPixelLocation.x = x;
-    contact.pointerInfo.ptPixelLocation.y = y;
-    contact.pointerInfo.pointerFlags =
-        POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-    contact.touchFlags = TOUCH_FLAG_NONE;
-    contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_ORIENTATION |
-                        TOUCH_MASK_PRESSURE;
-    contact.orientation = 90;
-    contact.pressure = 32000;
-    contact.rcContact.left = x - 2;
-    contact.rcContact.right = x + 2;
-    contact.rcContact.top = y - 2;
-    contact.rcContact.bottom = y + 2;
-
-    if (!InjectTouchInput(1, &contact)) {
-      LOG((CLOG_DEBUG "touch: InjectTouchInput DOWN failed, error=%lu, falling back to mouse",
-           GetLastError()));
-      deskMouseMove(x, y);
-      send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
-      send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
-      return;
-    }
-
-    PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_TOUCH_UPDATE,
-                      static_cast<WPARAM>(x), static_cast<LPARAM>(y));
-    return;
-  }
-
+  // HACK: Win10 — use mouse events directly instead of InjectTouchInput.
+  // InjectTouchInput goes through Win10's gesture recognition pipeline, which
+  // adds a ~500ms delay before the click is delivered. Simple mouse events
+  // don't have this delay. On Win11, InjectTouchInput may be needed for apps
+  // that distinguish touch from mouse — test for regressions.
   deskMouseMove(x, y);
   send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
   send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
@@ -688,6 +656,14 @@ void setCursorVisibility(bool visible)
 void MSWindowsDesks::deskEnter(Desk *desk, bool isTouchEntry)
 {
   registerTouchRawInput(desk->m_window, false);
+
+  // Remove foreground-change hook (installed in deskLeave for primary)
+  if (m_foregroundHook != NULL) {
+    UnhookWinEvent(m_foregroundHook);
+    m_foregroundHook = NULL;
+    m_deskWindow = NULL;
+    LOG((CLOG_DEBUG "foreground hook removed"));
+  }
 
   if (!m_isPrimary) {
     ReleaseCapture();
@@ -818,6 +794,22 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
     // WM_POINTER TOUCH events to be silently dropped system-wide.
     // Touch detection on primary relies on the LL hook (TOUCH_SIGNATURE)
     // and WM_POINTER on the screen window instead.
+
+    // HACK: Win10 — install a foreground-change hook to detect touch on apps
+    // that suppress legacy mouse synthesis (Chrome, Edge). When such an app
+    // gains foreground while in relay mode, it means the user touched it
+    // locally. The LL hook can't see these touches (no TOUCH_SIGNATURE), but
+    // the foreground change is detectable. On Win11, this hook is harmless
+    // but may cause double-detection if WM_POINTER also triggers — the
+    // debounce timer in DESKFLOW_MSG_TOUCH handling prevents double-switch.
+    m_deskWindow = desk->m_window;
+    if (m_foregroundHook == NULL) {
+      m_foregroundHook = SetWinEventHook(
+          EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
+          NULL, foregroundHookCallback, 0, 0,
+          WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+      LOG((CLOG_DEBUG "foreground hook installed: 0x%p", m_foregroundHook));
+    }
   } else {
     desk->m_foregroundWindow = getForegroundWindow();
 
@@ -831,6 +823,17 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
         desk->m_window, HWND_TOPMOST, m_xCenter, m_yCenter, 1, 1,
         SWP_NOACTIVATE | SWP_SHOWWINDOW
     );
+
+    // HACK: Win10 — re-enable raw HID touch input so we can detect touch
+    // on apps that suppress legacy mouse synthesis (Chrome, Edge). These
+    // apps handle WM_POINTER/WM_TOUCH natively, so the LL mouse hook never
+    // sees TOUCH_SIGNATURE. Raw HID input detects touch independently.
+    // RIDEV_INPUTSINK causes ~80% of WM_POINTER events to be dropped
+    // system-wide, but that's OK here: the user isn't interacting with this
+    // screen (cursor is on the primary). deskEnter removes the registration.
+    // On Win11, WM_POINTER delivery to secondaryDeskProc handles detection;
+    // RIDEV_INPUTSINK may cause regressions there — test carefully.
+    registerTouchRawInput(desk->m_window, true);
 
     ARCH->sleep(0.03);
     deskMouseMove(m_xCenter, m_yCenter);
@@ -993,6 +996,32 @@ void MSWindowsDesks::registerTouchRawInput(HWND window, bool enable)
       delete[] devices;
     }
   }
+}
+
+void CALLBACK MSWindowsDesks::foregroundHookCallback(
+    HWINEVENTHOOK /*hWinEventHook*/, DWORD /*event*/, HWND hwnd,
+    LONG idObject, LONG /*idChild*/, DWORD /*dwEventThread*/, DWORD /*dwmsEventTime*/)
+{
+  if (idObject != 0 || hwnd == NULL)  // 0 == OBJID_WINDOW
+    return;
+
+  MSWindowsDesks *self = s_instance;
+  if (!self || !self->m_deskWindow)
+    return;
+
+  // Ignore if the new foreground is our own desk window
+  if (hwnd == self->m_deskWindow)
+    return;
+
+  // A window other than the desk window gained foreground while in relay
+  // mode. On primary this means local interaction (touch on an app like
+  // Chrome that suppresses legacy mouse synthesis). Trigger screen switch.
+  POINT pt;
+  GetCursorPos(&pt);
+  LOG((CLOG_DEBUG "foreground hook: window 0x%08x gained foreground, "
+       "posting DESKFLOW_MSG_TOUCH at %d,%d", hwnd, pt.x, pt.y));
+  PostThreadMessage(self->m_threadID, DESKFLOW_MSG_TOUCH,
+                    static_cast<WPARAM>(pt.x), static_cast<LPARAM>(pt.y));
 }
 
 void MSWindowsDesks::deskThread(void *vdesk)

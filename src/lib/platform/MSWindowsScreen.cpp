@@ -1498,6 +1498,7 @@ bool MSWindowsScreen::onPointerInput(WPARAM wParam, LPARAM lParam)
   pt.x = GET_X_LPARAM(lParam);
   pt.y = GET_Y_LPARAM(lParam);
 
+  m_pendingTouchEntry = true;
   if (m_isPrimary) {
     LOG((CLOG_INFO "touch activating primary at %d,%d", pt.x, pt.y));
     sendEvent(m_events->forIPrimaryScreen().touchActivatedPrimary(),

@@ -322,4 +322,13 @@ private:
   SInt32 m_pendingTouchX = 0;
   SInt32 m_pendingTouchY = 0;
 
+  // WinEvent hook for detecting foreground window changes on primary in
+  // relay mode. Used as fallback touch detection for apps that suppress
+  // legacy mouse synthesis (Chrome, Edge).
+  HWINEVENTHOOK m_foregroundHook = NULL;
+  HWND m_deskWindow = NULL;  // cached for the callback
+  static MSWindowsDesks *s_instance;
+  static void CALLBACK foregroundHookCallback(
+      HWINEVENTHOOK hWinEventHook, DWORD event, HWND hwnd,
+      LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
 };
