@@ -364,6 +364,9 @@ private:
   MSWindowsPowerManager m_powerManager;
 
   bool m_touchActivateScreen;
+  // set when a touch-triggered screen switch is pending, consumed in enter()
+  // so deskEnter skips restoring the old foreground window.
+  bool m_pendingTouchEntry = false;
 
   Stopwatch m_touchDebounceTimer;
   static constexpr double kTouchDebounceTime = 0.15;

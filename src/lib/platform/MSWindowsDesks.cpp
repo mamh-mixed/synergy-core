@@ -201,9 +201,9 @@ void MSWindowsDesks::disable()
   m_isOnScreen = m_isPrimary;
 }
 
-void MSWindowsDesks::enter()
+void MSWindowsDesks::enter(bool isTouchEntry)
 {
-  sendMessage(DESKFLOW_MSG_ENTER, 0, 0);
+  sendMessage(DESKFLOW_MSG_ENTER, isTouchEntry ? 1 : 0, 0);
 }
 
 void MSWindowsDesks::leave(HKL keyLayout)
@@ -685,7 +685,7 @@ void setCursorVisibility(bool visible)
   LOG_ERR("unable to set cursor visibility after %d attempts", attempts);
 }
 
-void MSWindowsDesks::deskEnter(Desk *desk)
+void MSWindowsDesks::deskEnter(Desk *desk, bool isTouchEntry)
 {
   registerTouchRawInput(desk->m_window, false);
 
@@ -725,7 +725,11 @@ void MSWindowsDesks::deskEnter(Desk *desk)
   // (mouse over activation) but i've no idea how to do that.
   // the obvious workaround of using SetWindowPos() to move it back
   // after being raised doesn't work.
-  if (desk->m_foregroundWindow) {
+  // HACK: Win10 — skip foreground restore on touch entry so the touch click
+  // activates the intended window naturally. On non-touch entry (normal cursor
+  // switch), restore as before. On Win11, touch may need this restore if
+  // WM_POINTER-based activation behaves differently — test for regressions.
+  if (desk->m_foregroundWindow && !isTouchEntry) {
     DWORD thisThread = GetWindowThreadProcessId(desk->m_window, NULL);
     DWORD thatThread = GetWindowThreadProcessId(desk->m_foregroundWindow, NULL);
     AttachThreadInput(thatThread, thisThread, TRUE);
@@ -1108,7 +1112,7 @@ void MSWindowsDesks::deskThread(void *vdesk)
 
     case DESKFLOW_MSG_ENTER:
       m_isOnScreen = true;
-      deskEnter(desk);
+      deskEnter(desk, msg.wParam != 0);
       break;
 
     case DESKFLOW_MSG_LEAVE:

@@ -294,7 +294,9 @@ void MSWindowsScreen::disable()
 
 void MSWindowsScreen::enter()
 {
-  m_desks->enter();
+  bool isTouchEntry = m_pendingTouchEntry;
+  m_pendingTouchEntry = false;
+  m_desks->enter(isTouchEntry);
   if (m_isPrimary) {
     // enable special key sequences on win95 family
     enableSpecialKeys(true);
@@ -990,6 +992,7 @@ bool MSWindowsScreen::onPreDispatch(HWND hwnd, UINT message, WPARAM wParam, LPAR
 
       SInt32 x = static_cast<SInt32>(wParam);
       SInt32 y = static_cast<SInt32>(lParam);
+      m_pendingTouchEntry = true;
       if (m_isPrimary) {
         LOG((CLOG_INFO "hook: touch activating primary at %d,%d", x, y));
         sendEvent(m_events->forIPrimaryScreen().touchActivatedPrimary(),

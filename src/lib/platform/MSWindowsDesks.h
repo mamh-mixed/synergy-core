@@ -95,8 +95,11 @@ public:
   //! Notify of entering a desk
   /*!
   Prepares a desk for when the cursor enters it.
+  Pass isTouchEntry=true when the switch was triggered by a touch event so
+  that the previous foreground window is not restored (the touch click will
+  activate the intended window naturally).
   */
-  void enter();
+  void enter(bool isTouchEntry = false);
 
   //! Notify of leaving a desk
   /*!
@@ -229,7 +232,7 @@ private:
   void deskMouseMove(SInt32 x, SInt32 y) const;
   void deskFakeTouchClick(SInt32 x, SInt32 y) const;
   void deskMouseRelativeMove(SInt32 dx, SInt32 dy) const;
-  void deskEnter(Desk *desk);
+  void deskEnter(Desk *desk, bool isTouchEntry = false);
   void deskLeave(Desk *desk, HKL keyLayout);
   void deskThread(void *vdesk);
 
