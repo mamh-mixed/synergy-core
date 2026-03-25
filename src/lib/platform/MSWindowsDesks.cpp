@@ -789,11 +789,14 @@ void MSWindowsDesks::deskLeave(Desk *desk, HKL keyLayout)
       }
     }
 
-    // RIDEV_INPUTSINK removed: it consumes raw HID digitizer data before the
-    // WM_POINTER pipeline can generate pointer messages, causing ~80% of
-    // WM_POINTER TOUCH events to be silently dropped system-wide.
-    // Touch detection on primary relies on the LL hook (TOUCH_SIGNATURE)
-    // and WM_POINTER on the screen window instead.
+    // HACK: Win10 — re-enable raw HID touch input on primary during relay
+    // mode. This detects touch on ALL apps (including UWP like Calculator)
+    // that don't generate TOUCH_SIGNATURE or change the foreground window.
+    // RIDEV_INPUTSINK causes ~80% of WM_POINTER to be dropped system-wide,
+    // but in relay mode the user isn't interacting with primary apps anyway.
+    // deskEnter removes the registration, restoring normal touch delivery.
+    // On Win11, this may interfere with WM_POINTER — test for regressions.
+    registerTouchRawInput(desk->m_window, true);
 
     // HACK: Win10 — install a foreground-change hook to detect touch on apps
     // that suppress legacy mouse synthesis (Chrome, Edge). When such an app
