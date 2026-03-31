@@ -72,6 +72,8 @@ static PendingMod g_pendingMods[4] = {};
 static int g_pendingModCount = 0;
 static UInt8 g_pendingModBits = 0;
 static UInt8 g_comboFiredModBits = 0;
+static PendingMod g_firedMods[4] = {};
+static int g_firedModCount = 0;
 static HWND g_anchorForeground = NULL;
 static HWND g_anchorDeskWindow = NULL;
 
@@ -202,6 +204,7 @@ void MSWindowsHook::setMode(EHookMode mode)
     g_pendingModCount = 0;
     g_pendingModBits = 0;
     g_comboFiredModBits = 0;
+    g_firedModCount = 0;
   }
   g_mode = mode;
 }
@@ -292,9 +295,30 @@ static void flushPendingMods()
   g_pendingModBits = 0;
 }
 
+static void sendInputToTarget(INPUT *inputs, int count)
+{
+  HWND target = g_anchorForeground;
+  HWND deskWnd = g_anchorDeskWindow;
+  if (target != NULL && deskWnd != NULL) {
+    DWORD deskThread = GetWindowThreadProcessId(deskWnd, NULL);
+    DWORD targetThread = GetWindowThreadProcessId(target, NULL);
+    AttachThreadInput(targetThread, deskThread, TRUE);
+    SetForegroundWindow(target);
+    AttachThreadInput(targetThread, deskThread, FALSE);
+
+    SendInput(count, inputs, sizeof(INPUT));
+
+    AttachThreadInput(targetThread, deskThread, TRUE);
+    SetForegroundWindow(deskWnd);
+    AttachThreadInput(targetThread, deskThread, FALSE);
+  } else {
+    SendInput(count, inputs, sizeof(INPUT));
+  }
+}
+
 static void injectComboLocally(int triggerVk, WORD triggerScanCode)
 {
-  INPUT inputs[16] = {};
+  INPUT inputs[8] = {};
   int idx = 0;
 
   for (int i = 0; i < g_pendingModCount; i++) {
@@ -311,37 +335,34 @@ static void injectComboLocally(int triggerVk, WORD triggerScanCode)
   inputs[idx].ki.dwFlags = 0;
   idx++;
 
+  g_firedModCount = g_pendingModCount;
+  for (int i = 0; i < g_pendingModCount; i++)
+    g_firedMods[i] = g_pendingMods[i];
+
+  sendInputToTarget(inputs, idx);
+}
+
+static void releaseComboLocally(int triggerVk, WORD triggerScanCode)
+{
+  INPUT inputs[8] = {};
+  int idx = 0;
+
   inputs[idx].type = INPUT_KEYBOARD;
   inputs[idx].ki.wVk = (WORD)triggerVk;
   inputs[idx].ki.wScan = triggerScanCode;
   inputs[idx].ki.dwFlags = KEYEVENTF_KEYUP;
   idx++;
 
-  for (int i = g_pendingModCount - 1; i >= 0; i--) {
+  for (int i = g_firedModCount - 1; i >= 0; i--) {
     inputs[idx].type = INPUT_KEYBOARD;
-    inputs[idx].ki.wVk = (WORD)g_pendingMods[i].vk;
-    inputs[idx].ki.wScan = (WORD)MapVirtualKey(g_pendingMods[i].vk, MAPVK_VK_TO_VSC);
+    inputs[idx].ki.wVk = (WORD)g_firedMods[i].vk;
+    inputs[idx].ki.wScan = (WORD)MapVirtualKey(g_firedMods[i].vk, MAPVK_VK_TO_VSC);
     inputs[idx].ki.dwFlags = KEYEVENTF_KEYUP;
     idx++;
   }
 
-  HWND target = g_anchorForeground;
-  HWND deskWnd = g_anchorDeskWindow;
-  if (target != NULL && deskWnd != NULL) {
-    DWORD deskThread = GetWindowThreadProcessId(deskWnd, NULL);
-    DWORD targetThread = GetWindowThreadProcessId(target, NULL);
-    AttachThreadInput(targetThread, deskThread, TRUE);
-    SetForegroundWindow(target);
-    AttachThreadInput(targetThread, deskThread, FALSE);
-
-    SendInput(idx, inputs, sizeof(INPUT));
-
-    AttachThreadInput(targetThread, deskThread, TRUE);
-    SetForegroundWindow(deskWnd);
-    AttachThreadInput(targetThread, deskThread, FALSE);
-  } else {
-    SendInput(idx, inputs, sizeof(INPUT));
-  }
+  g_firedModCount = 0;
+  sendInputToTarget(inputs, idx);
 }
 
 static void setDeadKey(WCHAR wc[], int size, UINT flags)
@@ -450,11 +471,15 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
         }
       }
 
-      // While combo is active, trigger UP stays local
-      if (!isKeyDown && modBit == 0 && g_comboFiredModBits != 0) {
+      // While combo is active, trigger UP releases the combo.
+      // Skip injected events to avoid an infinite SendInput loop.
+      if (!isKeyDown && !isInjected && modBit == 0 && g_comboFiredModBits != 0) {
         for (int i = 0; i < g_anchoredComboCount; ++i) {
-          if (g_anchoredCombos[i].vk == vk)
-            return false;
+          if (g_anchoredCombos[i].vk == vk) {
+            WORD sc = (WORD)((lParam >> 16) & 0x1FF);
+            releaseComboLocally(vk, sc);
+            return true;
+          }
         }
       }
 
