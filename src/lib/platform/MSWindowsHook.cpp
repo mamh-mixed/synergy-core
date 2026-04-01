@@ -74,6 +74,10 @@ static UInt8 g_pendingModBits = 0;
 static UInt8 g_comboFiredModBits = 0;
 static PendingMod g_firedMods[4] = {};
 static int g_firedModCount = 0;
+static DWORD g_comboTriggerVk = 0;
+static WORD g_comboTriggerSc = 0;
+static DWORD g_pendingTriggerVk = 0;
+static LPARAM g_pendingTriggerLParam = 0;
 static HWND g_anchorForeground = NULL;
 static HWND g_anchorDeskWindow = NULL;
 
@@ -194,6 +198,9 @@ void MSWindowsHook::setZone(SInt32 x, SInt32 y, SInt32 w, SInt32 h, SInt32 jumpZ
   g_hScreen = h;
 }
 
+static void releaseComboLocally(int triggerVk, WORD triggerScanCode);
+static void injectComboLocally(int triggerVk, WORD triggerScanCode);
+
 void MSWindowsHook::setMode(EHookMode mode)
 {
   if (mode == g_mode) {
@@ -201,10 +208,17 @@ void MSWindowsHook::setMode(EHookMode mode)
     return;
   }
   if (g_mode == kHOOK_RELAY_EVENTS) {
+    if (g_comboFiredModBits != 0 && g_comboTriggerVk != 0) {
+      releaseComboLocally(g_comboTriggerVk, g_comboTriggerSc);
+    }
     g_pendingModCount = 0;
     g_pendingModBits = 0;
+    g_pendingTriggerVk = 0;
+    g_pendingTriggerLParam = 0;
     g_comboFiredModBits = 0;
     g_firedModCount = 0;
+    g_comboTriggerVk = 0;
+    memset(g_keyState, 0, sizeof(g_keyState));
   }
   g_mode = mode;
 }
@@ -295,10 +309,64 @@ static void flushPendingMods()
   g_pendingModBits = 0;
 }
 
+static void flushPendingTrigger()
+{
+  if (g_pendingTriggerVk != 0) {
+    WPARAM charAndVirtKey = makeKeyMsg((UINT)g_pendingTriggerVk, 0, false);
+    PostThreadMessage(g_threadID, DESKFLOW_MSG_KEY, charAndVirtKey, g_pendingTriggerLParam);
+    g_pendingTriggerVk = 0;
+    g_pendingTriggerLParam = 0;
+  }
+}
+
+static bool tryFireCombo()
+{
+  if (g_pendingTriggerVk == 0 || g_pendingModBits == 0)
+    return false;
+  for (int i = 0; i < g_anchoredComboCount; ++i) {
+    if (g_anchoredCombos[i].vk == g_pendingTriggerVk &&
+        g_anchoredCombos[i].modifiers == g_pendingModBits) {
+      WORD sc = (WORD)((g_pendingTriggerLParam >> 16) & 0x1FF);
+      injectComboLocally(g_pendingTriggerVk, sc);
+      g_comboFiredModBits = g_pendingModBits;
+      g_comboTriggerVk = g_pendingTriggerVk;
+      g_comboTriggerSc = sc;
+      PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG,
+          0xAC000000u | g_pendingTriggerVk | (g_comboFiredModBits << 8),
+          g_pendingTriggerLParam);
+      g_pendingModCount = 0;
+      g_pendingModBits = 0;
+      g_pendingTriggerVk = 0;
+      g_pendingTriggerLParam = 0;
+      return true;
+    }
+  }
+  return false;
+}
+
 static void sendInputToTarget(INPUT *inputs, int count)
 {
   HWND target = g_anchorForeground;
   HWND deskWnd = g_anchorDeskWindow;
+
+  INPUT wrapped[12] = {};
+  int idx = 0;
+
+  wrapped[idx].type = INPUT_KEYBOARD;
+  wrapped[idx].ki.wVk = DESKFLOW_HOOK_FAKE_INPUT_VIRTUAL_KEY;
+  wrapped[idx].ki.wScan = DESKFLOW_HOOK_FAKE_INPUT_SCANCODE;
+  wrapped[idx].ki.dwFlags = 0;
+  idx++;
+
+  for (int i = 0; i < count && idx < 11; i++)
+    wrapped[idx++] = inputs[i];
+
+  wrapped[idx].type = INPUT_KEYBOARD;
+  wrapped[idx].ki.wVk = DESKFLOW_HOOK_FAKE_INPUT_VIRTUAL_KEY;
+  wrapped[idx].ki.wScan = DESKFLOW_HOOK_FAKE_INPUT_SCANCODE;
+  wrapped[idx].ki.dwFlags = KEYEVENTF_KEYUP;
+  idx++;
+
   if (target != NULL && deskWnd != NULL) {
     DWORD deskThread = GetWindowThreadProcessId(deskWnd, NULL);
     DWORD targetThread = GetWindowThreadProcessId(target, NULL);
@@ -306,13 +374,13 @@ static void sendInputToTarget(INPUT *inputs, int count)
     SetForegroundWindow(target);
     AttachThreadInput(targetThread, deskThread, FALSE);
 
-    SendInput(count, inputs, sizeof(INPUT));
+    SendInput(idx, wrapped, sizeof(INPUT));
 
     AttachThreadInput(targetThread, deskThread, TRUE);
     SetForegroundWindow(deskWnd);
     AttachThreadInput(targetThread, deskThread, FALSE);
   } else {
-    SendInput(count, inputs, sizeof(INPUT));
+    SendInput(idx, wrapped, sizeof(INPUT));
   }
 }
 
@@ -430,16 +498,15 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
 
     if (g_anchoredComboCount > 0 && vk < 256) {
       bool isKeyDown = (lParam & 0x80000000u) == 0;
-      bool isInjected = (lParam & 0x40000000u) != 0;
       UInt8 modBit = modBitForVk(vk);
 
       // Modifier UP after combo fired: pass through locally, don't relay.
-      // Only clear combo state for physical (non-injected) UPs so the
-      // combo stays active while injectComboLocally's synthetic events
-      // are processed. The combo ends when the user physically releases.
+      // No isInjected guard -- VK_CANCEL wrapping keeps our own events out.
       if (!isKeyDown && modBit != 0 && (g_comboFiredModBits & modBit)) {
-        if (!isInjected) {
-          g_comboFiredModBits &= ~modBit;
+        g_comboFiredModBits &= ~modBit;
+        if (g_comboFiredModBits == 0 && g_comboTriggerVk != 0) {
+          releaseComboLocally(g_comboTriggerVk, g_comboTriggerSc);
+          g_comboTriggerVk = 0;
         }
         g_keyState[vk] = 0;
         if (vk == VK_LSHIFT || vk == VK_RSHIFT)
@@ -448,23 +515,16 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
       }
 
       // While combo is active, repeat combo trigger stays local.
-      // Skip injected events to avoid an infinite SendInput loop.
-      if (isKeyDown && !isInjected && modBit == 0 && g_comboFiredModBits != 0) {
+      if (isKeyDown && modBit == 0 && g_comboFiredModBits != 0) {
         for (int i = 0; i < g_anchoredComboCount; ++i) {
           if (g_anchoredCombos[i].vk == vk && g_anchoredCombos[i].modifiers == g_comboFiredModBits) {
             WORD sc = (WORD)((lParam >> 16) & 0x1FF);
-            INPUT inputs[3] = {};
+            INPUT inputs[1] = {};
             inputs[0].type = INPUT_KEYBOARD;
-            inputs[0].ki.wVk = VK_CANCEL;
+            inputs[0].ki.wVk = (WORD)vk;
+            inputs[0].ki.wScan = sc;
             inputs[0].ki.dwFlags = 0;
-            inputs[1].type = INPUT_KEYBOARD;
-            inputs[1].ki.wVk = (WORD)vk;
-            inputs[1].ki.wScan = sc;
-            inputs[1].ki.dwFlags = 0;
-            inputs[2].type = INPUT_KEYBOARD;
-            inputs[2].ki.wVk = VK_CANCEL;
-            inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
-            SendInput(3, inputs, sizeof(INPUT));
+            sendInputToTarget(inputs, 1);
             PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk | (g_comboFiredModBits << 8), lParam);
             return true;
           }
@@ -472,12 +532,12 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
       }
 
       // While combo is active, trigger UP releases the combo.
-      // Skip injected events to avoid an infinite SendInput loop.
-      if (!isKeyDown && !isInjected && modBit == 0 && g_comboFiredModBits != 0) {
+      if (!isKeyDown && modBit == 0 && g_comboFiredModBits != 0) {
         for (int i = 0; i < g_anchoredComboCount; ++i) {
           if (g_anchoredCombos[i].vk == vk) {
             WORD sc = (WORD)((lParam >> 16) & 0x1FF);
             releaseComboLocally(vk, sc);
+            g_comboTriggerVk = 0;
             return true;
           }
         }
@@ -508,34 +568,45 @@ static bool keyboardHookHandler(WPARAM wParam, LPARAM lParam)
           g_keyState[vk] = 0x80;
           if (vk == VK_LSHIFT || vk == VK_RSHIFT)
             g_keyState[VK_SHIFT] = 0x80;
+          if (tryFireCombo())
+            return true;
           return true; // eat it, don't relay yet
         }
       }
 
       // Modifier UP while pending: no combo arrived, flush to client
       if (!isKeyDown && modBit != 0 && (g_pendingModBits & modBit)) {
+        flushPendingTrigger();
         flushPendingMods();
         // fall through to relay this UP normally
       }
 
-      // Non-modifier key while mods are pending
-      if (modBit == 0 && g_pendingModBits != 0) {
-        if (isKeyDown) {
+      if (isKeyDown && modBit == 0) {
+        if (g_pendingModBits != 0 || g_pendingTriggerVk != 0) {
+          bool isThisComboTrigger = false;
           for (int i = 0; i < g_anchoredComboCount; ++i) {
-            if (g_anchoredCombos[i].vk == vk && g_anchoredCombos[i].modifiers == g_pendingModBits) {
-              WORD sc = (WORD)((lParam >> 16) & 0x1FF);
-              injectComboLocally(vk, sc);
-              g_comboFiredModBits = g_pendingModBits;
-              g_pendingModCount = 0;
-              g_pendingModBits = 0;
-              PostThreadMessage(g_threadID, DESKFLOW_MSG_DEBUG, 0xAC000000u | vk | (g_comboFiredModBits << 8), lParam);
-              return true; // eat the real trigger
+            if (g_anchoredCombos[i].vk == vk) {
+              isThisComboTrigger = true;
+              break;
             }
           }
+
+          if (isThisComboTrigger) {
+            g_pendingTriggerVk = vk;
+            g_pendingTriggerLParam = lParam;
+            if (tryFireCombo())
+              return true;
+            return true;
+          }
+
+          flushPendingTrigger();
+          flushPendingMods();
         }
-        // No combo match, flush pending mods to client
+      }
+
+      if (!isKeyDown && modBit == 0 && g_pendingTriggerVk != 0) {
+        flushPendingTrigger();
         flushPendingMods();
-        // fall through to relay this key normally
       }
 
       if (g_pendingModBits == 0 && g_comboFiredModBits == 0 &&
