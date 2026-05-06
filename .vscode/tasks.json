@@ -85,11 +85,6 @@
       }
     },
     {
-      "label": "tests",
-      "dependsOn": ["integtests", "unittests"],
-      "problemMatcher": []
-    },
-    {
       "label": "kill-all",
       "type": "shell",
       "dependsOn": ["kill-gui", "kill-daemon", "kill-core"],
@@ -114,9 +109,9 @@
     {
       "label": "kill-core",
       "type": "shell",
-      "command": "killall -9 synergy-core synergy-server synergy-client || true",
+      "command": "killall -9 synergy-core || true",
       "windows": {
-        "command": "taskkill /F /IM synergy-core.exe; taskkill /F /IM synergy-server.exe; taskkill /F /IM synergy-client.exe; $true"
+        "command": "taskkill /F /IM synergy-core.exe; $true"
       },
     },
     {
@@ -181,70 +176,6 @@
       "type": "shell",
       "dependsOn": ["build-kill-core", "daemon-stop", "daemon-uninstall", "daemon-install"],
       "dependsOrder": "sequence",
-    },
-    {
-      "label": "unittests (current)",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "./scripts/tests.py",
-        "--unit-tests",
-        "--ignore-return-code",
-        "--filter-file=${file}"
-      ],
-      "dependsOn": ["build", "clean-gcda"]
-    },
-    {
-      "label": "integtests (current)",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "./scripts/tests.py",
-        "--integ-tests",
-        "--ignore-return-code",
-        "--filter-file=${file}"
-      ],
-      "dependsOn": ["build", "clean-gcda"]
-    },
-    {
-      "label": "unittests",
-      "type": "shell",
-      "command": "python",
-      "args": ["./scripts/tests.py", "--unit-tests", "--ignore-return-code"],
-      "dependsOn": ["build", "clean-gcda"]
-    },
-    {
-      "label": "integtests",
-      "type": "shell",
-      "command": "python",
-      "args": ["./scripts/tests.py", "--integ-tests", "--ignore-return-code"],
-      "dependsOn": ["build", "clean-gcda"]
-    },
-    {
-      "label": "unittests (current, valgrind)",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "./scripts/tests.py",
-        "--unit-tests",
-        "--ignore-return-code",
-        "--filter-file=${file}",
-        "--valgrind"
-      ],
-      "dependsOn": ["build", "clean-gcda"]
-    },
-    {
-      "label": "integtests (current, valgrind)",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "./scripts/tests.py",
-        "--integ-tests",
-        "--ignore-return-code",
-        "--filter-file=${file}",
-        "--valgrind"
-      ],
-      "dependsOn": ["build", "clean-gcda"]
     }
   ]
 }

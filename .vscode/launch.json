@@ -31,30 +31,6 @@
       "preLaunchTask": "build-silent"
     },
     {
-      "name": "unix - server",
-      "type": "lldb-dap",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin/synergy-server",
-      "args": ["--config-toml", "synergy-config.toml"],
-      "preLaunchTask": "build-silent",
-      "osx": {
-        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy-server"
-      }
-    },
-    {
-      "name": "unix - client",
-      "type": "lldb-dap",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin/synergy-client",
-      "args": ["--config-toml", "synergy-config.toml"],
-      "preLaunchTask": "build-silent",
-      "osx": {
-        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy-client"
-      }
-    },
-    {
       "name": "unix - daemon",
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
@@ -104,36 +80,6 @@
       "program": "${workspaceFolder}/build/bin-copy/integtests",
       "args": ["${input:gtest-args}"],
       "internalConsoleOptions": "openOnSessionStart"
-    },
-    {
-      "name": "windows - server",
-      "type": "cppvsdbg",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin-copy/synergy-server",
-      "args": ["--config-toml", "synergy-config.toml"],
-      "internalConsoleOptions": "openOnSessionStart",
-      "preLaunchTask": "build-kill-core"
-    },
-    {
-      "name": "windows - client",
-      "type": "cppvsdbg",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin-copy/synergy-client",
-      "args": ["--config-toml", "synergy-config.toml"],
-      "internalConsoleOptions": "openOnSessionStart",
-      "preLaunchTask": "build-kill-core"
-    },
-    {
-      "name": "windows - legacy",
-      "type": "cppvsdbg",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin-copy/synergy-legacy",
-      "args": ["--get-profile-dir"],
-      "internalConsoleOptions": "openOnSessionStart",
-      "preLaunchTask": "build"
     },
     {
       "name": "windows - active-desktop",
