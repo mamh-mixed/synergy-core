@@ -7,6 +7,9 @@
 
 #include "OSXPowerManager.h"
 #include "base/Log.h"
+#include "common/Constants.h"
+
+#include <string>
 
 OSXPowerManager::~OSXPowerManager()
 {
@@ -16,10 +19,12 @@ OSXPowerManager::~OSXPowerManager()
 void OSXPowerManager::disableSleep()
 {
   if (!m_sleepPreventionAssertionID) {
-    CFStringRef reasonForActivity = CFSTR("Deskflow application");
+    const std::string reason = std::string(kAppName) + " application";
+    CFStringRef reasonForActivity = CFStringCreateWithCString(nullptr, reason.c_str(), kCFStringEncodingUTF8);
     IOReturn result = IOPMAssertionCreateWithName(
         kIOPMAssertPreventUserIdleDisplaySleep, kIOPMAssertionLevelOn, reasonForActivity, &m_sleepPreventionAssertionID
     );
+    CFRelease(reasonForActivity);
     if (result != kIOReturnSuccess) {
       m_sleepPreventionAssertionID = 0;
       LOG_ERR("failed to disable system idle sleep");

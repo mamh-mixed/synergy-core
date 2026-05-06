@@ -8,6 +8,7 @@
 #include "SecureUtils.h"
 
 #include "base/FinalAction.h"
+#include "common/Constants.h"
 
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -85,7 +86,7 @@ void generatePemSelfSignedCert(const QString &path, int keyLength)
   X509_set_pubkey(cert, privateKey);
 
   auto *name = X509_get_subject_name(cert);
-  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Deskflow"), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(kAppName), -1, -1, 0);
   X509_set_issuer_name(cert, name);
 
   X509_sign(cert, privateKey, EVP_sha256());

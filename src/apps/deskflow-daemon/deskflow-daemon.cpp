@@ -10,6 +10,7 @@
 #include "arch/Arch.h"
 #include "base/EventQueue.h"
 #include "base/Log.h"
+#include "common/Constants.h"
 #include "common/ExitCodes.h"
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
@@ -131,6 +132,7 @@ void handleError(const char *message)
 
 #if defined(Q_OS_WIN)
   // Show a message box for when run from MSI in Win32 subsystem.
-  MessageBoxA(nullptr, message, "Deskflow daemon error", MB_OK | MB_ICONERROR);
+  const std::string title = std::string(kAppName) + " daemon error";
+  MessageBoxA(nullptr, message, title.c_str(), MB_OK | MB_ICONERROR);
 #endif
 }
