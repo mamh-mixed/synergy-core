@@ -12,6 +12,10 @@ add_executable(${target}
   CoreArgParser.cpp
 )
 
+string(TOLOWER "${CMAKE_PROJECT_PROPER_NAME}" _basename)
+set_target_properties(${target} PROPERTIES OUTPUT_NAME "${_basename}-core")
+unset(_basename)
+
 if(WIN32)
   # Generate rc file
   set(EXE_DESCRIPTION "${CMAKE_PROJECT_PROPER_NAME} combined server and client application")

@@ -19,6 +19,10 @@ if(WIN32)
     DaemonApp.h
     ${CMAKE_CURRENT_BINARY_DIR}/${target}.rc)
 
+  string(TOLOWER "${CMAKE_PROJECT_PROPER_NAME}" _basename)
+  set_target_properties(${target} PROPERTIES OUTPUT_NAME "${_basename}-daemon")
+  unset(_basename)
+
   target_link_libraries(
     ${target}
     arch

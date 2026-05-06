@@ -88,6 +88,9 @@ set(CMAKE_PROJECT_COPYRIGHT "(C) 2024-2026 ${CMAKE_PROJECT_VENDOR}")
 set(CMAKE_PROJECT_CONTACT "${CMAKE_PROJECT_PROPER_NAME} <maintainers@deskflow.org>")
 set(CMAKE_PROJECT_REV_FQDN "org.deskflow.deskflow")
 
+# Pull in Synergy branding overrides.
+include(${CMAKE_SOURCE_DIR}/extra/cmake/Synergy.cmake)
+
 #Unset the vars used in the project call
 unset(DESKFLOW_VERSION_MAJOR)
 unset(DESKFLOW_VERSION_MINOR)
@@ -177,8 +180,10 @@ elseif(BUILD_OSX_BUNDLE)
   set(CMAKE_INSTALL_BINDIR ${CMAKE_PROJECT_PROPER_NAME}.app/Contents/MacOS)
   set(CMAKE_INSTALL_LICENSE_DIR ${CMAKE_PROJECT_PROPER_NAME}.app/Contents/Resources)
 else()
-  set(CMAKE_INSTALL_LICENSE_DIR ${CMAKE_INSTALL_DATADIR}/licenses/${CMAKE_PROJECT_NAME})
-  set(CMAKE_INSTALL_I18N_DIR ${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}/translations)
+  string(TOLOWER "${CMAKE_PROJECT_PROPER_NAME}" _proj_lower)
+  set(CMAKE_INSTALL_LICENSE_DIR ${CMAKE_INSTALL_DATADIR}/licenses/${_proj_lower})
+  set(CMAKE_INSTALL_I18N_DIR ${CMAKE_INSTALL_DATADIR}/${_proj_lower}/translations)
+  unset(_proj_lower)
 endif()
 
 add_subdirectory(docs)

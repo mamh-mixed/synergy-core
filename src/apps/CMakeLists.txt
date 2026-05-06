@@ -18,11 +18,11 @@ function(generate_app_man TARGET NAME)
           --name ${NAME}
           --include ${CMAKE_SOURCE_DIR}/src/apps/res/manpage.txt
           --no-info
-          ${target}
-          -o $<TARGET_FILE_DIR:${target}>/${target}.1
+          $<TARGET_FILE_BASE_NAME:${target}>
+          -o $<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_BASE_NAME:${target}>.1
     )
     install(
-      FILES $<TARGET_FILE_DIR:${target}>/${target}.1
+      FILES $<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_BASE_NAME:${target}>.1
       DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
     )
   endif()

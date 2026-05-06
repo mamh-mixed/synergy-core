@@ -1,0 +1,250 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "dependsOn": ["build-cmake"],
+      "windows": {
+        "command": "robocopy ${workspaceFolder}/build/bin ${workspaceFolder}/build/bin-copy /R:0 /E /S /NJS /NJH /NFL /NDL; exit 0"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+    },
+    {
+      "label": "build-cmake",
+      "type": "cmake",
+      "command": "build",
+      "targets": ["all"],
+      "preset": "${command:cmake.activeBuildPresetName}",
+      "group": "build",
+      "problemMatcher": {
+        "base": "$gcc",
+        "fileLocation": ["absolute"]
+      },
+    },
+    {
+      "label": "build-kill-core",
+      "dependsOn": ["kill-daemon", "kill-core", "build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "build-kill-gui",
+      "dependsOn": ["kill-gui", "kill-core", "build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "build-silent",
+      "type": "shell",
+      "dependsOn": ["build"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+      }
+    },
+    {
+      "label": "clean",
+      "type": "cmake",
+      "command": "build",
+      "targets": ["clean"],
+      "preset": "${command:cmake.activeBuildPresetName}",
+      "group": "build"
+    },
+    {
+      "label": "clean-gcda",
+      "type": "shell",
+      "command": "find . -name '*.gcda' -delete",
+      "windows": {
+        "command": "$null"
+      },
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "clean-qt",
+      "type": "shell",
+      "command": "rm -r build/src/gui build/src/lib/gui",
+      "windows": {
+        "command": "remove-item -recurse build/src/gui,build/src/lib/gui"
+      }
+    },
+    {
+      "label": "clean-config",
+      "type": "shell",
+      "linux": {
+        "command": "rm -r ~/.config/Synergy/Synergy.conf"
+      },
+      "windows": {
+        "command": "remove-item -recurse $env:APPDATA\\Synergy\\Synergy"
+      },
+      "osx": {
+        "command": "rm -r ~/Library/Application\\ Support/Synergy/Synergy"
+      }
+    },
+    {
+      "label": "tests",
+      "dependsOn": ["integtests", "unittests"],
+      "problemMatcher": []
+    },
+    {
+      "label": "kill-all",
+      "type": "shell",
+      "dependsOn": ["kill-gui", "kill-daemon", "kill-core"],
+    },
+    {
+      "label": "kill-gui",
+      "type": "shell",
+      "command": "killall -9 synergy || true",
+      "windows": {
+        "command": "taskkill /F /IM synergy.exe; $true"
+      },
+    },
+    {
+      "label": "kill-daemon",
+      "type": "shell",
+      "command": "killall -9 synergy-daemon || true",
+      "windows": {
+        "command": "taskkill /F /IM synergy-daemon.exe; $true"
+      },
+      "dependsOn": ["daemon-stop"],
+    },
+    {
+      "label": "kill-core",
+      "type": "shell",
+      "command": "killall -9 synergy-core synergy-server synergy-client || true",
+      "windows": {
+        "command": "taskkill /F /IM synergy-core.exe; taskkill /F /IM synergy-server.exe; taskkill /F /IM synergy-client.exe; $true"
+      },
+    },
+    {
+      "label": "gui",
+      "type": "process",
+      "command": "${workspaceFolder}/build/bin/synergy",
+      "problemMatcher": [],
+      "dependsOn": ["build"],
+      "windows": {
+        "dependsOn": ["build-kill-gui"],
+        "command": "${workspaceFolder}/build/bin-copy/synergy.exe"
+      }
+    },
+    {
+      "label": "daemon-stop",
+      "type": "shell",
+      "command": "echo noop > /dev/null",
+      "windows": {
+        "command": "Stop-Service -Name 'Synergy' -Force; while ((Get-Service -Name 'Synergy').Status -ne 'Stopped') { Start-Sleep -Seconds 1 }",
+      },
+    },
+    {
+      "label": "daemon-start",
+      "type": "shell",
+      "command": "echo noop > /dev/null",
+      "windows": {
+        "command": "Start-Service -Name 'Synergy'; while ((Get-Service -Name 'Synergy').Status -ne 'Running') { Start-Sleep -Seconds 1 }",
+      },
+    },
+    {
+      "label": "daemon-restart",
+      "type": "shell",
+      "command": "echo noop > /dev/null",
+      "windows": {
+        "command": "Restart-Service -Name 'Synergy'",
+      },
+    },
+    {
+      "label": "daemon-deploy",
+      "type": "shell",
+      "dependsOn": ["build-kill-core", "daemon-start"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "daemon-install",
+      "type": "shell",
+      "command": "echo noop > /dev/null",
+      "windows": {
+        "command": "${workspaceFolder}/build/bin-copy/synergy-daemon.exe --install"
+      }
+    },
+    {
+      "label": "daemon-uninstall",
+      "type": "shell",
+      "command": "echo noop > /dev/null",
+      "windows": {
+        "command": "${workspaceFolder}/build/bin-copy/synergy-daemon.exe --uninstall"
+      }
+    },
+    {
+      "label": "daemon-reinstall",
+      "type": "shell",
+      "dependsOn": ["build-kill-core", "daemon-stop", "daemon-uninstall", "daemon-install"],
+      "dependsOrder": "sequence",
+    },
+    {
+      "label": "unittests (current)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "./scripts/tests.py",
+        "--unit-tests",
+        "--ignore-return-code",
+        "--filter-file=${file}"
+      ],
+      "dependsOn": ["build", "clean-gcda"]
+    },
+    {
+      "label": "integtests (current)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "./scripts/tests.py",
+        "--integ-tests",
+        "--ignore-return-code",
+        "--filter-file=${file}"
+      ],
+      "dependsOn": ["build", "clean-gcda"]
+    },
+    {
+      "label": "unittests",
+      "type": "shell",
+      "command": "python",
+      "args": ["./scripts/tests.py", "--unit-tests", "--ignore-return-code"],
+      "dependsOn": ["build", "clean-gcda"]
+    },
+    {
+      "label": "integtests",
+      "type": "shell",
+      "command": "python",
+      "args": ["./scripts/tests.py", "--integ-tests", "--ignore-return-code"],
+      "dependsOn": ["build", "clean-gcda"]
+    },
+    {
+      "label": "unittests (current, valgrind)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "./scripts/tests.py",
+        "--unit-tests",
+        "--ignore-return-code",
+        "--filter-file=${file}",
+        "--valgrind"
+      ],
+      "dependsOn": ["build", "clean-gcda"]
+    },
+    {
+      "label": "integtests (current, valgrind)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "./scripts/tests.py",
+        "--integ-tests",
+        "--ignore-return-code",
+        "--filter-file=${file}",
+        "--valgrind"
+      ],
+      "dependsOn": ["build", "clean-gcda"]
+    }
+  ]
+}

@@ -21,7 +21,7 @@ deskflow-config.toml
 .DS_Store
 *.code-workspace
 .env*
-/scripts/*.egg-info
+/scripts
 /*.user
 *.ui.autosave
 
@@ -40,12 +40,3 @@ CMakeCache.txt
 CMakeUserPresets.json
 CMakeFiles/*
 
-# vscode folder
-/.vscode
-
-# scripts folder
-/scripts
-
-# Ai helperfilers
-**/[cC]laude.[mM][dD]
-**/CLAUDE.[mM][dD]

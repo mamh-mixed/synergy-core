@@ -1,0 +1,193 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "unix - gui",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/synergy",
+      "preLaunchTask": "build-silent",
+      "osx": {
+        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy"
+      }
+    },
+    {
+      "name": "unix - unittests",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/unittests",
+      "args": ["${input:gtest-args}"],
+      "preLaunchTask": "build-silent"
+    },
+    {
+      "name": "unix - integtests",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/integtests",
+      "args": ["${input:gtest-args}"],
+      "preLaunchTask": "build-silent"
+    },
+    {
+      "name": "unix - server",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/synergy-server",
+      "args": ["--config-toml", "synergy-config.toml"],
+      "preLaunchTask": "build-silent",
+      "osx": {
+        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy-server"
+      }
+    },
+    {
+      "name": "unix - client",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/synergy-client",
+      "args": ["--config-toml", "synergy-config.toml"],
+      "preLaunchTask": "build-silent",
+      "osx": {
+        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy-client"
+      }
+    },
+    {
+      "name": "unix - daemon",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin/synergy-daemon",
+      "args": ["-f"],
+      "preLaunchTask": "build-silent"
+    },
+    {
+      "name": "unix - attach",
+      "type": "lldb-dap",
+      "request": "attach",
+      "pid": "${command:pickProcess}"
+    },
+    {
+      "name": "windows - gui",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy",
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-gui"
+    },
+    {
+      "name": "windows - version",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-core",
+      "args": ["--version"],
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "name": "windows - unittests",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/unittests",
+      "args": ["${input:gtest-args}"],
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "name": "windows - integtests",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/integtests",
+      "args": ["${input:gtest-args}"],
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "name": "windows - server",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-server",
+      "args": ["--config-toml", "synergy-config.toml"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-core"
+    },
+    {
+      "name": "windows - client",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-client",
+      "args": ["--config-toml", "synergy-config.toml"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-core"
+    },
+    {
+      "name": "windows - legacy",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-legacy",
+      "args": ["--get-profile-dir"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build"
+    },
+    {
+      "name": "windows - active-desktop",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-core",
+      "args": ["--active-desktop"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-core"
+    },
+    {
+      "name": "windows - daemon foreground",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-daemon",
+      "args": ["-f"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-core"
+    },
+    {
+      "name": "windows - daemon install",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-daemon",
+      "args": ["--install"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build"
+    },
+    {
+      "name": "windows - daemon uninstall",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-daemon",
+      "args": ["--uninstall"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build"
+    },
+    {
+      "name": "windows - attach",
+      "type": "cppvsdbg",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "gtest-args",
+      "type": "promptString",
+      "description": "Test arguments",
+      "default": "--gtest_filter=*"
+    }
+  ]
+}

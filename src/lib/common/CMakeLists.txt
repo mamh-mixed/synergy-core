@@ -1,10 +1,12 @@
 # SPDX-FileCopyrightText: (C) 2024 - 2025 Chris Rizzitello <sithlord48@gmail.com>
 # SPDX-License-Identifier: MIT
 
-set(CORE_BINARY "${CMAKE_PROJECT_NAME}-core")
+string(TOLOWER "${CMAKE_PROJECT_PROPER_NAME}" _basename)
+set(CORE_BINARY "${_basename}-core")
 if(WIN32)
   string(APPEND CORE_BINARY ".exe")
 endif()
+unset(_basename)
 
 configure_file(Constants.h.in Constants.h @ONLY)
 configure_file(VersionInfo.h.in VersionInfo.h @ONLY)
