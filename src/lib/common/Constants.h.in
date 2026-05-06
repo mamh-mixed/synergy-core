@@ -22,6 +22,7 @@ const auto kCopyright = //
 
 const auto kCoreBinName = "@CORE_BINARY@";
 const auto kCoreIpcName = "@CMAKE_PROJECT_NAME@-core";
+const auto kGuiSocketName = "@CMAKE_PROJECT_NAME@-gui";
 
 #ifdef _WIN32
 
@@ -33,5 +34,8 @@ const auto kWindowsRuntimeMinor = @REQUIRED_MSVC_RUNTIME_MINOR@;
 constexpr auto kCoreBinNameW = L"@CORE_BINARY@";
 constexpr auto kCloseEventName = L"Global\\@CMAKE_PROJECT_PROPER_NAME@Close";
 constexpr auto kSendSasEventName = L"Global\\@CMAKE_PROJECT_PROPER_NAME@SendSAS";
+constexpr auto kClipboardOwnershipFormatW = L"@CMAKE_PROJECT_PROPER_NAME@ Ownership";
+constexpr auto kDeskClassNameW = L"@CMAKE_PROJECT_PROPER_NAME@Desk";
+constexpr auto kDaemonExitMsgNameW = L"@CMAKE_PROJECT_PROPER_NAME@DaemonExit";
 
 #endif

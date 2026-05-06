@@ -13,6 +13,7 @@
 #include "base/IJob.h"
 #include "base/Log.h"
 #include "base/TMethodJob.h"
+#include "common/Constants.h"
 #include "deskflow/IScreenSaver.h"
 #include "deskflow/ScreenException.h"
 #include "deskflow/win32/AppUtilWindows.h"
@@ -353,7 +354,7 @@ ATOM MSWindowsDesks::createDeskWindowClass(bool isPrimary) const
   classInfo.hCursor = m_cursor;
   classInfo.hbrBackground = nullptr;
   classInfo.lpszMenuName = nullptr;
-  classInfo.lpszClassName = L"DeskflowDesk";
+  classInfo.lpszClassName = kDeskClassNameW;
   classInfo.hIconSm = nullptr;
   return RegisterClassEx(&classInfo);
 }
@@ -615,7 +616,7 @@ void MSWindowsDesks::deskThread(const void *vdesk)
 
     // create a window.  we use this window to hide the cursor.
     try {
-      desk->m_window = createWindow(m_deskClass, L"DeskflowDesk");
+      desk->m_window = createWindow(m_deskClass, kDeskClassNameW);
       LOG_DEBUG("desk %ls window is 0x%08x", desk->m_name.c_str(), desk->m_window);
     } catch (...) {
       // ignore

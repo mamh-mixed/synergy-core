@@ -40,3 +40,6 @@ CMakeCache.txt
 CMakeUserPresets.json
 CMakeFiles/*
 
+# AI
+/.claude
+

@@ -8,7 +8,7 @@
 
 #include "LogLevel.h"
 #include "NetworkProtocol.h"
-#include "UrlConstants.h"
+#include "common/UrlConstants.h"
 
 #include <QCoreApplication>
 #include <QFile>

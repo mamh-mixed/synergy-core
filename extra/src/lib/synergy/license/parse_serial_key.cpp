@@ -19,7 +19,6 @@
 
 #include "SerialKey.h"
 #include "SerialKeyType.h"
-#include "utils/string_utils.h"
 
 #include <exception>
 #include <optional>
@@ -30,6 +29,18 @@
 using Parts = std::vector<std::string>;
 using system_clock = std::chrono::system_clock;
 using time_point = system_clock::time_point;
+
+namespace {
+std::string trim(const std::string &s)
+{
+  const auto first = s.find_first_not_of(" \t\n\r\f\v");
+  if (first == std::string::npos) {
+    return "";
+  }
+  const auto last = s.find_last_not_of(" \t\n\r\f\v");
+  return s.substr(first, last - first + 1);
+}
+} // namespace
 
 namespace synergy::license {
 
@@ -42,7 +53,7 @@ std::optional<time_point> parseDate(const std::string &unixTimeString);
 
 SerialKey parseSerialKey(const std::string &hexString)
 {
-  const auto &trimmed = deskflow::utils::trim(hexString);
+  const auto &trimmed = trim(hexString);
   const auto &plainText = decode(trimmed);
   const auto &parts = tokenize(plainText);
   const auto &version = parts.at(0);
@@ -148,7 +159,7 @@ Parts tokenize(const std::string &plainText)
 
 std::optional<time_point> parseDate(const std::string &unixTimeString)
 {
-  auto clean = deskflow::utils::trim(unixTimeString);
+  auto clean = trim(unixTimeString);
   if (clean.empty()) {
     return std::nullopt;
   }

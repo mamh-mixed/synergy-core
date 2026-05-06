@@ -91,6 +91,16 @@ set(CMAKE_PROJECT_REV_FQDN "org.deskflow.deskflow")
 # Pull in Synergy branding overrides.
 include(${CMAKE_SOURCE_DIR}/extra/cmake/Synergy.cmake)
 
+# Derive CMAKE_PROJECT_DOMAIN from CMAKE_PROJECT_REV_FQDN.
+# org.deskflow.deskflow -> deskflow.org;  com.symless.synergy -> symless.com
+string(REPLACE "." ";" _fqdn_parts "${CMAKE_PROJECT_REV_FQDN}")
+list(GET _fqdn_parts 0 _tld)
+list(GET _fqdn_parts 1 _domain)
+set(CMAKE_PROJECT_DOMAIN "${_domain}.${_tld}")
+unset(_fqdn_parts)
+unset(_tld)
+unset(_domain)
+
 #Unset the vars used in the project call
 unset(DESKFLOW_VERSION_MAJOR)
 unset(DESKFLOW_VERSION_MINOR)
@@ -192,6 +202,7 @@ add_subdirectory(docs)
 add_subdirectory(translations)
 
 add_subdirectory(src)
+add_subdirectory(extra)
 
 option(BUILD_INSTALLER "Build installer" ON)
 if(BUILD_INSTALLER)
