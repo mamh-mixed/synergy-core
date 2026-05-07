@@ -1,6 +1,6 @@
 /*
  * synergy -- mouse and keyboard sharing utility
- * Copyright (C) 2024 Symless Ltd.
+ * Copyright (C) 2024 Synergy App Ltd
  *
  * This package is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,7 +26,7 @@ namespace synergy::gui {
 const auto kProProductName = "Synergy 1 Pro";
 const auto kBusinessProductName = "Synergy 1 Business";
 
-const auto kUrlApi = "https://symless.com/api";
+const auto kUrlApi = "https://synergyapp.io/api";
 const auto kUrlWebsite = DESKFLOW_WEBSITE_URL;
 const auto kUrlSourceQuery = "source=gui";
 

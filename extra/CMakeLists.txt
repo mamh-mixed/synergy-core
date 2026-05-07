@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: (C) 2012 - 2026 Symless Ltd
+# SPDX-FileCopyrightText: (C) 2012 - 2026 Synergy App Ltd
 # SPDX-License-Identifier: MIT
 
 # Make synergy/... headers under this tree resolvable from anywhere that descends

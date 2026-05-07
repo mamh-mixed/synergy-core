@@ -4,8 +4,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About Deskflow</source>
-        <translation>关于 Deskflow</translation>
+        <source>About %1</source>
+        <translation>关于 %1</translation>
     </message>
     <message>
         <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;

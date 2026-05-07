@@ -4,8 +4,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>About Deskflow</source>
-        <translation>Informazioni su Deskflow</translation>
+        <source>About %1</source>
+        <translation>Informazioni su %1</translation>
     </message>
     <message>
         <source>Version: </source>

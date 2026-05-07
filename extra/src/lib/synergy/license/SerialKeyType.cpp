@@ -1,6 +1,6 @@
 /*
  * Synergy -- mouse and keyboard sharing utility
- * Copyright (C) 2015 Symless Ltd.
+ * Copyright (C) 2015 Synergy App Ltd
  *
  * This package is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

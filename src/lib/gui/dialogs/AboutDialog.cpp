@@ -12,6 +12,7 @@
 #include "common/Constants.h"
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
+#include "gui/StyleUtils.h"
 
 #include <QClipboard>
 
@@ -19,8 +20,11 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
 {
   ui->setupUi(this);
 
-  setWindowTitle(QStringLiteral("About %1").arg(kAppName));
-  ui->lblName->setText(kAppName);
+  setWindowTitle(windowTitle().arg(kAppName));
+  ui->lblIcon->hide();
+  ui->lblName->setPixmap(QPixmap(QStringLiteral(":/image/logo-%1.png").arg(deskflow::gui::iconMode())));
+  ui->lblName->setContentsMargins(0, 0, 0, 10);
+  ui->linkContributors->hide();
 
   const int px = (fontMetrics().height() * 6);
   const QSize pixmapSize(px, px);
