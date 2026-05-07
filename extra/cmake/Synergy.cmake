@@ -32,15 +32,34 @@ set(CMAKE_PROJECT_NAME synergy)
 option(SYNERGY_VERSION_RELEASE "Release version" OFF)
 option(SYNERGY_VERSION_SNAPSHOT "Snapshot version" OFF)
 
+# Compute revision count once. Used as both the +rN suffix in snapshot version
+# strings and as CMAKE_PROJECT_VERSION_TWEAK (consumed by VersionInfo.h.in's
+# kDisplayVersion ternary and src/apps/res/windows.rc.in's VER_VERSION 4th
+# digit, which Windows update mechanisms key off for installer recognition).
+set(_rev_count 0)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe HEAD --tags --long --match "v[0-9]*"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    OUTPUT_VARIABLE _git_describe
+    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(_git_describe MATCHES "-([0-9]+)-g")
+    set(_rev_count "${CMAKE_MATCH_1}")
+  endif()
+endif()
+
 set(_base "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")
 if(SYNERGY_VERSION_RELEASE)
   set(CMAKE_PROJECT_VERSION "${_base}")
   set(CMAKE_PROJECT_VERSION_TWEAK 0)
 elseif(SYNERGY_VERSION_SNAPSHOT)
-  set(CMAKE_PROJECT_VERSION "${_base}-snapshot")
-  set(CMAKE_PROJECT_VERSION_TWEAK 1)
+  set(CMAKE_PROJECT_VERSION "${_base}-snapshot+r${_rev_count}")
+  set(CMAKE_PROJECT_VERSION_TWEAK ${_rev_count})
 else()
   set(CMAKE_PROJECT_VERSION "${_base}-dev")
-  set(CMAKE_PROJECT_VERSION_TWEAK 1)
+  set(CMAKE_PROJECT_VERSION_TWEAK ${_rev_count})
 endif()
 unset(_base)
+unset(_git_describe)
+unset(_rev_count)
