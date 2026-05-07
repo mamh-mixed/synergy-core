@@ -19,12 +19,17 @@
 
 #include "common/Settings.h"
 #include "license/LicenseHandler.h"
+#include "synergy/gui/TestSettings.h"
 #include "synergy/gui/constants.h"
 
+#include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDialog>
+#include <QMainWindow>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QProcess>
 #include <QSettings>
@@ -33,7 +38,33 @@ using namespace synergy::gui;
 
 void FeatureHandler::handleMainWindow(QMainWindow *mainWindow)
 {
-  Q_UNUSED(mainWindow);
+  m_pMainWindow = mainWindow;
+}
+
+void FeatureHandler::handleAppStart()
+{
+  if (TestSettings::instance().isEnabled()) {
+    addTestMenu();
+  }
+}
+
+void FeatureHandler::addTestMenu()
+{
+  if (m_pMainWindow == nullptr) {
+    qWarning("cannot add test menu, main window not set");
+    return;
+  }
+
+  auto testMenu = new QMenu(QObject::tr("Test"), m_pMainWindow);
+  m_pMainWindow->menuBar()->addMenu(testMenu);
+
+  auto fatalAction = new QAction(QObject::tr("Trigger fatal error"), m_pMainWindow);
+  QObject::connect(fatalAction, &QAction::triggered, [] { qFatal("test fatal error"); });
+  testMenu->addAction(fatalAction);
+
+  auto criticalAction = new QAction(QObject::tr("Trigger critical error"), m_pMainWindow);
+  QObject::connect(criticalAction, &QAction::triggered, [] { qCritical("test critical error"); });
+  testMenu->addAction(criticalAction);
 }
 
 void FeatureHandler::handleSettings(QDialog *parent) const

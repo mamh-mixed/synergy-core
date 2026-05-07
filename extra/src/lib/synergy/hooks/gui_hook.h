@@ -37,6 +37,7 @@ inline void onMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *co
 
 inline bool onAppStart()
 {
+  FeatureHandler::instance().handleAppStart();
   return LicenseHandler::instance().handleAppStart();
 }
 

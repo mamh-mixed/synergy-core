@@ -30,6 +30,7 @@ public:
   }
 
   void handleMainWindow(QMainWindow *mainWindow);
+  void handleAppStart();
   void handleSettings(QDialog *parent) const;
 
   // Switches the active settings file between system and user scope and
@@ -37,4 +38,9 @@ public:
   // upstream's UI; Synergy keeps the feature downstream as a license-tier
   // capability. Caller is responsible for license-tier gating.
   static void switchScope(QDialog *parent, bool toSystemScope);
+
+private:
+  void addTestMenu();
+
+  QMainWindow *m_pMainWindow = nullptr;
 };
