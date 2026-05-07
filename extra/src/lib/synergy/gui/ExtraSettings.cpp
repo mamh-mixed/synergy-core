@@ -17,44 +17,66 @@
 
 #include "ExtraSettings.h"
 
+#include "common/Constants.h"
 #include "common/Settings.h"
 
 #include <QDebug>
+#include <QFileInfo>
+#include <QSettings>
 
 namespace synergy::gui {
 
-const auto kSerialKeySettingKey = QStringLiteral("synergy/serialKey");
-const auto kActivatedSettingKey = QStringLiteral("synergy/activated");
-const auto kGraceStartSettingKey = QStringLiteral("synergy/graceStartEpochSecs");
+namespace {
+
+// Persisted synergy-side state lives in its own sibling file rather than
+// upstream's Synergy.conf, because upstream's Settings::cleanSettings()
+// strips any key not in its allow-list at startup. Keeping our state out
+// of that file means no upstream patch + no key-allow-list maintenance.
+QString settingsFile()
+{
+  return QStringLiteral("%1/%2.extra.conf").arg(Settings::UserDir, kAppName);
+}
+
+const auto kSerialKey = QStringLiteral("serialKey");
+const auto kActivated = QStringLiteral("activated");
+const auto kGraceStart = QStringLiteral("graceStartEpochSecs");
+
+} // namespace
 
 void ExtraSettings::load()
 {
-  m_serialKey = Settings::value(kSerialKeySettingKey).toString();
-  m_activated = Settings::value(kActivatedSettingKey).toBool();
-  m_graceStartEpochSecs = Settings::value(kGraceStartSettingKey).toLongLong();
+  QSettings ini(settingsFile(), QSettings::IniFormat);
+  m_serialKey = ini.value(kSerialKey).toString();
+  m_activated = ini.value(kActivated).toBool();
+  m_graceStartEpochSecs = ini.value(kGraceStart).toLongLong();
 }
 
 void ExtraSettings::sync()
 {
-  if (!Settings::isWritable()) {
-    qCritical() << "unable to save synergy settings, file not writable:" << Settings::settingsFile();
+  QSettings ini(settingsFile(), QSettings::IniFormat);
+  if (!ini.isWritable()) {
+    qCritical() << "unable to save synergy settings, file not writable:" << ini.fileName();
     return;
   }
-
-  Settings::setValue(kSerialKeySettingKey, m_serialKey);
-  Settings::setValue(kActivatedSettingKey, m_activated);
-  Settings::setValue(kGraceStartSettingKey, m_graceStartEpochSecs);
-  Settings::save();
+  ini.setValue(kSerialKey, m_serialKey);
+  ini.setValue(kActivated, m_activated);
+  ini.setValue(kGraceStart, m_graceStartEpochSecs);
+  ini.sync();
 }
 
 QString ExtraSettings::fileName() const
 {
-  return Settings::settingsFile();
+  return settingsFile();
 }
 
 bool ExtraSettings::isWritable() const
 {
-  return Settings::isWritable();
+  QFileInfo info(settingsFile());
+  if (info.exists()) {
+    return info.isWritable();
+  }
+  // If the file doesn't exist yet, writability depends on the parent dir.
+  return QFileInfo(info.absolutePath()).isWritable();
 }
 
 } // namespace synergy::gui
