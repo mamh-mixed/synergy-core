@@ -5,13 +5,13 @@ option(CLEAN_TRS "Clean obsolete translations from tr files" OFF)
 find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS LinguistTools)
 
 # To add a new language Add 639 shortname
-set (${CMAKE_PROJECT_NAME}_TRS
-  ${CMAKE_PROJECT_NAME}_es.ts
-  ${CMAKE_PROJECT_NAME}_it.ts
-  ${CMAKE_PROJECT_NAME}_ja.ts
-  ${CMAKE_PROJECT_NAME}_zh_CN.ts
-  ${CMAKE_PROJECT_NAME}_ru.ts
-  ${CMAKE_PROJECT_NAME}_ko.ts
+set (deskflow_TRS
+  deskflow_es.ts
+  deskflow_it.ts
+  deskflow_ja.ts
+  deskflow_zh_CN.ts
+  deskflow_ru.ts
+  deskflow_ko.ts
 )
 
 set(TR_OPTIONS -no-ui-lines -locations none -silent)
@@ -20,10 +20,10 @@ if(CLEAN_TRS)
 endif()
 
 # English will have only plurals
-qt_create_translation(TRS ${CMAKE_SOURCE_DIR}/src ${CMAKE_PROJECT_NAME}_en.ts OPTIONS -pluralonly ${TR_OPTIONS})
+qt_create_translation(TRS ${CMAKE_SOURCE_DIR}/src deskflow_en.ts OPTIONS -pluralonly ${TR_OPTIONS})
 
 # Other languages contain the full set of strings.
-qt_create_translation(TRS ${CMAKE_SOURCE_DIR}/src ${${CMAKE_PROJECT_NAME}_TRS} OPTIONS ${TR_OPTIONS})
+qt_create_translation(TRS ${CMAKE_SOURCE_DIR}/src ${deskflow_TRS} OPTIONS ${TR_OPTIONS})
 
 #ensure that the targets are built always
 add_custom_target(app_translations ALL DEPENDS ${TRS})
@@ -50,8 +50,8 @@ else()
   )
 
   # install the other Qt lang files renamed to qt_lang.qm
-  foreach(LANG ${${CMAKE_PROJECT_NAME}_TRS})
-    string(REPLACE "${CMAKE_PROJECT_NAME}_" "" LANG ${LANG})
+  foreach(LANG ${deskflow_TRS})
+    string(REPLACE "deskflow_" "" LANG ${LANG})
     string(REPLACE ".ts" "" LANG ${LANG})
     add_custom_command(
       TARGET app_translations POST_BUILD

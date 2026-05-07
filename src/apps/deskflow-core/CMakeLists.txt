@@ -4,17 +4,14 @@
 # SPDX-License-Identifier: MIT
 
 set(target ${CMAKE_PROJECT_NAME}-core)
+set(filename deskflow-core)
 
 add_executable(${target}
-  "${target}.cpp"
+  "${filename}.cpp"
   CoreArgs.h
   CoreArgParser.h
   CoreArgParser.cpp
 )
-
-string(TOLOWER "${CMAKE_PROJECT_PROPER_NAME}" _basename)
-set_target_properties(${target} PROPERTIES OUTPUT_NAME "${_basename}-core")
-unset(_basename)
 
 if(WIN32)
   # Generate rc file
@@ -23,7 +20,7 @@ if(WIN32)
   configure_file(${CMAKE_SOURCE_DIR}/src/apps/res/windows.rc.in ${target}.rc)
 
   target_sources(${target} PRIVATE
-    ${target}.exe.manifest
+    ${filename}.exe.manifest
     ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.ico
     ${CMAKE_CURRENT_BINARY_DIR}/${target}.rc
   )

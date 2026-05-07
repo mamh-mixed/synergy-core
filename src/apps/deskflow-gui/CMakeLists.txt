@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: MIT
 
 if(APPLE)
-  set(target Deskflow)
+  set(target ${CMAKE_PROJECT_PROPER_NAME})
 else()
-  set(target deskflow)
+  set(target ${CMAKE_PROJECT_NAME})
 endif()
+set(filename deskflow-gui)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -17,9 +18,9 @@ if(WIN32)
   set(platform_extra deskflow.rc)
 elseif(BUILD_OSX_BUNDLE)
   #setup our bundle plist file
-  set(BUNDLE_EXECUTABLE_NAME "${CMAKE_PROJECT_PROPER_NAME}")
-  set(BUNDLE_BUNDLE_NAME "${CMAKE_PROJECT_PROPER_NAME}")
-  set(BUNDLE_DISPLAY_NAME "${CMAKE_PROJECT_PROPER_NAME}")
+  set(BUNDLE_EXECUTABLE_NAME "${target}")
+  set(BUNDLE_BUNDLE_NAME "${target}")
+  set(BUNDLE_DISPLAY_NAME "${target}")
   set(BUNDLE_GUI_IDENTIFIER "${CMAKE_PROJECT_REV_FQDN}")
   set(BUNDLE_ICON_FILE ${target}.icns)
   set(BUNDLE_INFO_STRING "${CMAKE_PROJECT_DESCRIPTION}")
@@ -39,16 +40,8 @@ add_executable(${target} WIN32 MACOSX_BUNDLE
   ${platform_extra}
   ../res/deskflow.qrc
   ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.qrc
-  deskflow-gui.cpp
+  ${filename}.cpp
 )
-
-if(APPLE)
-  set_target_properties(${target} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_PROPER_NAME}")
-else()
-  string(TOLOWER "${CMAKE_PROJECT_PROPER_NAME}" _basename)
-  set_target_properties(${target} PROPERTIES OUTPUT_NAME "${_basename}")
-  unset(_basename)
-endif()
 
 target_link_libraries(
   ${target}
