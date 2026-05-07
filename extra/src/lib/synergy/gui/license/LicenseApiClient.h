@@ -50,14 +50,14 @@ public:
     return m_isBusy;
   }
 
-signals:
+Q_SIGNALS:
   void activationFailed(const QString &message);
   void activationSucceeded();
   void checkFailed(const QString &message);
   void checkSucceeded();
   void licenseDisabled(const QString &message);
 
-private slots:
+private Q_SLOTS:
   void handleResponse(QNetworkReply *reply);
 
 private:

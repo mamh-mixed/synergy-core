@@ -18,11 +18,12 @@
 #include "ActivationDialog.h"
 
 #include "CancelActivationDialog.h"
-#include "gui/config/AppConfig.h"
-#include "gui/styles.h"
+#include "common/Settings.h"
+#include "synergy/gui/TestSettings.h"
 #include "synergy/gui/constants.h"
 #include "synergy/gui/license/LicenseHandler.h"
 #include "synergy/gui/license/license_notices.h"
+#include "synergy/gui/styles.h"
 #include "synergy/license/parse_serial_key.h"
 #include "ui_ActivationDialog.h"
 
@@ -39,10 +40,9 @@ using namespace synergy::license;
 const QString successTitle = "Serial key";
 const QString problemTitle = "Serial key problem";
 
-ActivationDialog::ActivationDialog(QWidget *parent, AppConfig &appConfig, LicenseHandler &licenseHandler)
+ActivationDialog::ActivationDialog(QWidget *parent, LicenseHandler &licenseHandler)
     : QDialog(parent),
       m_ui(new Ui::ActivationDialog),
-      m_pAppConfig(&appConfig),
       m_licenseHandler(licenseHandler)
 {
   m_ui->setupUi(this);
@@ -59,10 +59,10 @@ ActivationDialog::~ActivationDialog()
 
 void ActivationDialog::refreshSerialKey()
 {
-  const QString envSerialKey = qEnvironmentVariable("SYNERGY_TEST_SERIAL_KEY");
-  if (!envSerialKey.isEmpty()) {
-    qDebug("using serial key from env var");
-    m_ui->m_pTextEditSerialKey->setText(envSerialKey);
+  const QString testSerialKey = TestSettings::instance().serialKey();
+  if (!testSerialKey.isEmpty()) {
+    qDebug("using serial key from test settings");
+    m_ui->m_pTextEditSerialKey->setText(testSerialKey);
   } else {
     qDebug("using serial key from config");
     const auto hexString = m_licenseHandler.license().serialKey().hexString;
@@ -198,7 +198,7 @@ void ActivationDialog::showSuccessDialog()
   QString message = tr("<p>Thanks for entering your serial key for %1.</p>").arg(m_licenseHandler.productName());
 
   const auto tlsAvailable = m_licenseHandler.license().isTlsAvailable();
-  if (tlsAvailable && m_pAppConfig->tlsEnabled()) {
+  if (tlsAvailable && Settings::value(Settings::Security::TlsEnabled).toBool()) {
     message += "<p>To ensure that TLS encryption works correctly, "
                "please use the same serial key on all of your computers.</p>";
   }

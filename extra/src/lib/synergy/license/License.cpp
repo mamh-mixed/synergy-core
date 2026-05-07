@@ -59,11 +59,6 @@ bool License::isTlsAvailable() const
   return m_serialKey.product.isFeatureAvailable(Product::Feature::kTls);
 }
 
-bool License::isInvertConnectionAvailable() const
-{
-  return m_serialKey.product.isFeatureAvailable(Product::Feature::kInvertConnection);
-}
-
 bool License::isSettingsScopeAvailable() const
 {
   return m_serialKey.product.isFeatureAvailable(Product::Feature::kSettingsScope);

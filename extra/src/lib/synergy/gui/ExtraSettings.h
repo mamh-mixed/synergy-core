@@ -17,20 +17,17 @@
 
 #pragma once
 
-#include "gui/config/Settings.h"
-
-#include <QSettings>
 #include <QString>
-#include <QUuid>
 
 namespace synergy::gui {
 
-class ExtraSettings : public deskflow::gui::Settings
+// Synergy license state (serial key, activation, grace period). Stored as
+// synergy/* keys in the upstream Settings file via the new static Settings API.
+class ExtraSettings
 {
-  Q_OBJECT
 public:
   ExtraSettings() = default;
-  virtual ~ExtraSettings() = default;
+
   void load();
   void sync();
 
@@ -60,6 +57,9 @@ public:
   {
     m_graceStartEpochSecs = epochSecs;
   }
+
+  QString fileName() const;
+  bool isWritable() const;
 
 private:
   QString m_serialKey;

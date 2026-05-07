@@ -25,14 +25,12 @@ namespace Ui {
 class ActivationDialog;
 }
 
-class AppConfig;
-
 class ActivationDialog : public QDialog
 {
   Q_OBJECT
 
 public:
-  ActivationDialog(QWidget *parent, AppConfig &appConfig, LicenseHandler &licenseHandler);
+  ActivationDialog(QWidget *parent, LicenseHandler &licenseHandler);
   ~ActivationDialog() override;
 
   class ActivationMessageError : public std::runtime_error
@@ -48,7 +46,7 @@ public:
     return m_serialKeyChanged;
   }
 
-public slots:
+public Q_SLOTS:
   void reject() override;
   void accept() override;
 
@@ -62,7 +60,6 @@ private:
   void showEvent(QShowEvent *) override;
 
   Ui::ActivationDialog *m_ui;
-  AppConfig *m_pAppConfig;
   LicenseHandler &m_licenseHandler;
   bool m_serialKeyChanged = false;
 };

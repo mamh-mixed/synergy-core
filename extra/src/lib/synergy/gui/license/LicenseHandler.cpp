@@ -18,17 +18,16 @@
 #include "LicenseHandler.h"
 
 #include "ActivationDialog.h"
+#include "common/Settings.h"
+#include "common/VersionInfo.h"
 #include "dialogs/UpgradeDialog.h"
-#include "gui/config/AppConfig.h"
 #include "gui/core/CoreProcess.h"
-#include "gui/styles.h"
 #include "synergy/gui/constants.h"
 #include "synergy/gui/license/license_utils.h"
+#include "synergy/gui/styles.h"
 #include "synergy/license/Product.h"
-#include "version.h"
 
 #include <QAction>
-#include <QCheckBox>
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -40,7 +39,6 @@
 #include <QMessageBox>
 #include <QObject>
 #include <QProcessEnvironment>
-#include <QRadioButton>
 #include <QSysInfo>
 #include <QTimer>
 #include <QtCore>
@@ -92,13 +90,10 @@ LicenseHandler::LicenseHandler()
   connect(&m_apiClient, &LicenseApiClient::licenseDisabled, this, &LicenseHandler::disableLicenseRemotely);
 }
 
-void LicenseHandler::handleMainWindow(
-    QMainWindow *mainWindow, AppConfig *appConfig, deskflow::gui::CoreProcess *coreProcess
-)
+void LicenseHandler::handleMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *coreProcess)
 {
   // Must still be set as these are used when not enabled.
   m_pMainWindow = mainWindow;
-  m_pAppConfig = appConfig;
   m_pCoreProcess = coreProcess;
 
   if (!m_enabled) {
@@ -119,13 +114,9 @@ bool LicenseHandler::handleAppStart()
     qFatal("main window not set");
   }
 
-  if (m_pAppConfig == nullptr) {
-    qFatal("app config not set");
-  }
-
   if (!m_enabled) {
     qDebug("license handler disabled, skipping start handler");
-    m_pMainWindow->setWindowTitle(SYNERGY_PRODUCT_NAME);
+    m_pMainWindow->setWindowTitle(kAppName);
     return true;
   }
 
@@ -150,30 +141,14 @@ bool LicenseHandler::handleAppStart()
   return true;
 }
 
-void LicenseHandler::handleSettings(
-    QDialog *parent, QCheckBox *enableTls, QCheckBox *invertConnection, QRadioButton *systemScope,
-    QRadioButton *userScope
-) const
+void LicenseHandler::handleSettings(QDialog *parent) const
 {
-  if (!m_enabled) {
-    qDebug("license handler disabled, skipping settings handler");
-    return;
-  }
+  Q_UNUSED(parent);
 
-  const auto onTlsToggle = [this, parent, enableTls] {
-    qDebug("license handler, tls checkbox toggled");
-    checkTlsCheckBox(parent, enableTls, true);
-  };
-  QObject::connect(enableTls, &QCheckBox::toggled, onTlsToggle);
-
-  const auto onInvertConnectionToggle = [this, parent, invertConnection] {
-    qDebug("license handler, invert connection checkbox toggled");
-    checkInvertConnectionCheckBox(parent, invertConnection, true);
-  };
-  QObject::connect(invertConnection, &QCheckBox::toggled, onInvertConnectionToggle);
-
-  checkTlsCheckBox(parent, enableTls, false);
-  checkInvertConnectionCheckBox(parent, invertConnection, false);
+  // Settings UI injection (TLS toggle, scope radios, etc.) lives in extra/.
+  // To be wired when the synergy widget-injection layer lands; until then,
+  // license-tier clamping happens in clampFeatures() at app start and on
+  // license change.
 }
 
 void LicenseHandler::handleVersionCheck(QString &versionUrl)
@@ -203,10 +178,6 @@ bool LicenseHandler::handleCoreStart()
   if (!m_enabled) {
     qDebug("license handler disabled, skipping core start handler");
     return true;
-  }
-
-  if (m_pAppConfig == nullptr) {
-    qFatal("app config not set");
   }
 
   if (m_pMainWindow == nullptr) {
@@ -276,7 +247,7 @@ bool LicenseHandler::showSerialKeyDialog()
     return false;
   }
 
-  ActivationDialog dialog(m_pMainWindow, *m_pAppConfig, *this);
+  ActivationDialog dialog(m_pMainWindow, *this);
   const auto result = dialog.exec();
   if (result != QDialog::Accepted) {
     qWarning("license serial key dialog declined");
@@ -318,43 +289,6 @@ void LicenseHandler::updateWindowTitle() const
   const auto productName = QString::fromStdString(m_license.productName());
   qDebug("updating main window title: %s", qPrintable(productName));
   m_pMainWindow->setWindowTitle(productName);
-}
-
-void LicenseHandler::checkTlsCheckBox(QDialog *parent, QCheckBox *checkBoxEnableTls, bool showDialog) const
-{
-  if (!m_license.isTlsAvailable() && checkBoxEnableTls->isChecked()) {
-    qDebug("tls not available, showing upgrade dialog");
-    checkBoxEnableTls->setChecked(false);
-
-    if (showDialog) {
-      UpgradeDialog dialog(parent);
-      dialog.showDialog(
-          QString("TLS Encryption"),
-          QString("Please upgrade to %1 to enable TLS encryption.").arg(synergy::gui::kProProductName),
-          synergy::gui::kUrlPersonalUpgrade
-      );
-    }
-  }
-}
-
-void LicenseHandler::checkInvertConnectionCheckBox(
-    QDialog *parent, QCheckBox *checkBoxInvertConnection, bool showDialog
-) const
-{
-  if (!m_license.isInvertConnectionAvailable() && checkBoxInvertConnection->isChecked()) {
-    qDebug("invert connection not available, showing upgrade dialog");
-    checkBoxInvertConnection->setChecked(false);
-
-    if (showDialog) {
-      UpgradeDialog dialog(parent);
-      dialog.showDialog(
-          QString("Invert Connection"),
-          QString("Please upgrade to %1 to enable the invert connection feature.")
-              .arg(synergy::gui::kBusinessProductName),
-          synergy::gui::kUrlContact
-      );
-    }
-  }
 }
 
 const synergy::license::License &LicenseHandler::license() const
@@ -449,22 +383,18 @@ bool LicenseHandler::check()
 
 void LicenseHandler::clampFeatures()
 {
-  if (m_pAppConfig->tlsEnabled() && !m_license.isTlsAvailable()) {
+  if (Settings::value(Settings::Security::TlsEnabled).toBool() && !m_license.isTlsAvailable()) {
     qWarning("tls not available, disabling tls");
-    m_pAppConfig->setTlsEnabled(false);
+    Settings::setValue(Settings::Security::TlsEnabled, false);
   }
 
-  if (m_pAppConfig->invertConnection() && !m_license.isInvertConnectionAvailable()) {
-    qWarning("invert connection not available, disabling invert connection");
-    m_pAppConfig->setInvertConnection(false);
-  }
-
-  if (m_pAppConfig->isSystemScope() && !m_license.isSettingsScopeAvailable()) {
+  const auto isSystemScope = (Settings::settingsFile() == Settings::SystemSettingFile);
+  if (isSystemScope && !m_license.isSettingsScopeAvailable()) {
     qFatal("settings scope not available");
   }
 
   qDebug("committing default feature settings");
-  m_pAppConfig->commit();
+  Settings::save();
 }
 
 void LicenseHandler::disable()
@@ -497,13 +427,14 @@ LicenseApiClient::Data LicenseHandler::buildApiData() const
   const auto machineSignature = QCryptographicHash::hash(machineId, QCryptographicHash::Sha256).toHex();
   const auto hostnameSignature = QCryptographicHash::hash(hostname.toUtf8(), QCryptographicHash::Sha256).toHex();
 
+  const auto isServer = (Settings::value(Settings::Core::CoreMode).toInt() == Settings::Server);
   return {
       machineSignature,
       hostnameSignature,
       QString::fromStdString(m_license.serialKey().hexString),
       kVersion,
       QSysInfo::prettyProductName(),
-      m_pAppConfig->serverGroupChecked()
+      isServer
   };
 }
 

@@ -17,9 +17,8 @@
 
 #pragma once
 
-class AppConfig;
 class QDialog;
-class QRadioButton;
+class QMainWindow;
 
 class FeatureHandler
 {
@@ -30,14 +29,12 @@ public:
     return instance;
   }
 
-  void handleMainWindow(AppConfig *appConfig);
-  void handleSettings(QDialog *parent, QRadioButton *systemScope, QRadioButton *userScope) const;
+  void handleMainWindow(QMainWindow *mainWindow);
+  void handleSettings(QDialog *parent) const;
 
-private:
-  void handleSettingsScopeRadioButton(QDialog *parent, QRadioButton *systemScope, QRadioButton *userScope, bool checked)
-      const;
-  bool
-  checkSettingsScopeLicense(QDialog *parent, QRadioButton *systemScope, QRadioButton *userScope, bool showDialog) const;
-
-  AppConfig *m_appConfig = nullptr;
+  // Switches the active settings file between system and user scope and
+  // restarts the application. The community removed system/user scope from
+  // upstream's UI; Synergy keeps the feature downstream as a license-tier
+  // capability. Caller is responsible for license-tier gating.
+  static void switchScope(QDialog *parent, bool toSystemScope);
 };

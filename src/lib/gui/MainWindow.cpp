@@ -31,6 +31,10 @@
 #include "net/FingerprintDatabase.h"
 #include "widgets/StatusBar.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
@@ -157,6 +161,10 @@ MainWindow::MainWindow()
   applyConfig();
   m_statusBar->setSecurityIcon(TlsUtility::isEnabled());
   restoreWindow();
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onMainWindow(this, &m_coreProcess);
+#endif
 }
 MainWindow::~MainWindow()
 {
@@ -405,6 +413,12 @@ void MainWindow::startCore()
 
   m_actionStartCore->setVisible(false);
   m_actionRestartCore->setVisible(true);
+
+#ifdef SYNERGY_EXTRA_HEADER
+  if (!synergy::hooks::onCoreStart()) {
+    return;
+  }
+#endif
   m_coreProcess.start();
 }
 

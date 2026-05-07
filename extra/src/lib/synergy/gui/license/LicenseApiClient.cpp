@@ -17,6 +17,7 @@
 
 #include "LicenseApiClient.h"
 
+#include "synergy/gui/TestSettings.h"
 #include "synergy/gui/constants.h"
 
 #include <QJsonDocument>
@@ -29,14 +30,14 @@ namespace synergy::gui::license {
 
 QString activateUrl()
 {
-  const auto envVar = qEnvironmentVariable("SYNERGY_TEST_API_URL_ACTIVATE");
-  return envVar.isEmpty() ? kUrlApiLicenseActivate : envVar;
+  const auto testUrl = TestSettings::instance().apiUrlActivate();
+  return testUrl.isEmpty() ? kUrlApiLicenseActivate : testUrl;
 }
 
 QString checkUrl()
 {
-  const auto envVar = qEnvironmentVariable("SYNERGY_TEST_API_URL_CHECK");
-  return envVar.isEmpty() ? kUrlApiLicenseCheck : envVar;
+  const auto testUrl = TestSettings::instance().apiUrlCheck();
+  return testUrl.isEmpty() ? kUrlApiLicenseCheck : testUrl;
 }
 
 LicenseApiClient::LicenseApiClient()

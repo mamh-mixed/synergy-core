@@ -53,7 +53,6 @@ public:
   }
 
   bool isTlsAvailable() const;
-  bool isInvertConnectionAvailable() const;
   bool isSettingsScopeAvailable() const;
   bool isValid() const
   {

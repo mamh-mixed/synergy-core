@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "common/Constants.h"
+
 #include <QString>
 
 #include <chrono>
@@ -27,7 +29,7 @@ const auto kProProductName = "Synergy 1 Pro";
 const auto kBusinessProductName = "Synergy 1 Business";
 
 const auto kUrlApi = "https://synergyapp.io/api";
-const auto kUrlWebsite = DESKFLOW_WEBSITE_URL;
+const auto kUrlWebsite = QStringLiteral("https://%1").arg(kAppDomain);
 const auto kUrlSourceQuery = "source=gui";
 
 const auto kLinkBuy = R"(<a href="%1" style="color: %2">Buy now</a>)";

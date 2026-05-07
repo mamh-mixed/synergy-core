@@ -14,10 +14,4 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 add_subdirectory(license)
-
-# gui subdirectory disabled until hook modernization rewires it.
-# The synergy GUI code was written against an older deskflow gui API
-# (gui/string_utils.h, gui/styles.h, gui/diagnostic.h, gui/config/AppConfig.h,
-# gui/config/Settings.h — all refactored away upstream). Re-enable when hook
-# wiring lands and the gui integration is ported.
-# add_subdirectory(gui)
+add_subdirectory(gui)

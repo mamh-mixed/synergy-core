@@ -1,5 +1,5 @@
 /*
- * synergy -- mouse and keyboard sharing utility
+ * Synergy -- mouse and keyboard sharing utility
  * Copyright (C) 2024 Synergy App Ltd
  *
  * This package is free software; you can redistribute it and/or
@@ -17,23 +17,18 @@
 
 #pragma once
 
-#include <chrono>
-#include <optional>
+#include <QString>
 
-namespace synergy::gui {
+// Style constants used by Synergy UI. Previously lived in upstream's
+// `gui/styles.h`; that header was removed during the deskflow gui refactor,
+// so we keep our own copy here in the overlay.
 
-class AppTime
-{
-  using TimePoint = std::chrono::system_clock::time_point;
+const auto kColorWhite = "#ffffff";
+const auto kColorPrimary = "#ff7c00";
+const auto kColorSecondary = "#4285f4";
+const auto kColorNotice = "#3b67d3";
 
-public:
-  AppTime();
-  TimePoint now();
-  bool hasTestTime() const;
-
-private:
-  std::optional<std::chrono::seconds> m_testStartTime = std::nullopt;
-  TimePoint m_realStartTime = std::chrono::system_clock::now();
-};
-
-} // namespace synergy::gui
+const auto kStyleNoticeLabel = //
+    QString("padding: 3px 5px; border-radius: 3px;"
+            "background-color: %1; color: %2")
+        .arg(kColorNotice, kColorWhite);

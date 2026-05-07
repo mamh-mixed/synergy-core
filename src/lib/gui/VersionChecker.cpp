@@ -9,6 +9,10 @@
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QLocale>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -24,7 +28,10 @@ VersionChecker::VersionChecker(QObject *parent) : QObject(parent), m_network{new
 
 void VersionChecker::checkLatest() const
 {
-  const QString url = Settings::value(Settings::Gui::UpdateCheckUrl).toString();
+  QString url = Settings::value(Settings::Gui::UpdateCheckUrl).toString();
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onVersionCheck(url);
+#endif
   qDebug("checking for updates at: %s", qPrintable(url));
   auto request = QNetworkRequest(url);
   auto userAgent = QString("%1 %2 on %3").arg(kAppName, kVersion, QSysInfo::prettyProductName());

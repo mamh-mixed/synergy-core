@@ -17,84 +17,46 @@
 
 #include "FeatureHandler.h"
 
-#include "dialogs/UpgradeDialog.h"
-#include "gui/config/AppConfig.h"
-#include "gui/constants.h"
-#include "gui/diagnostic.h"
+#include "common/Settings.h"
 #include "license/LicenseHandler.h"
 #include "synergy/gui/constants.h"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDialog>
 #include <QMessageBox>
-#include <QRadioButton>
+#include <QProcess>
+#include <QSettings>
 
-using namespace deskflow::gui;
 using namespace synergy::gui;
 
-void FeatureHandler::handleMainWindow(AppConfig *appConfig)
+void FeatureHandler::handleMainWindow(QMainWindow *mainWindow)
 {
-  m_appConfig = appConfig;
+  Q_UNUSED(mainWindow);
 }
 
-void FeatureHandler::handleSettings(QDialog *parent, QRadioButton *systemScope, QRadioButton *userScope) const
+void FeatureHandler::handleSettings(QDialog *parent) const
 {
-  const auto onSystemScopeToggle = [this, parent, systemScope, userScope](bool checked) {
-    qDebug("system scope radio button toggled");
-    systemScope->blockSignals(true);
-    userScope->blockSignals(true);
-    handleSettingsScopeRadioButton(parent, systemScope, userScope, checked);
-    systemScope->blockSignals(false);
-    userScope->blockSignals(false);
-  };
-  QObject::connect(systemScope, &QRadioButton::toggled, onSystemScopeToggle);
+  Q_UNUSED(parent);
 
-  checkSettingsScopeLicense(parent, systemScope, userScope, false);
+  // Synergy-specific settings UI (scope radios, etc.) lives in extra/. To be
+  // wired when the synergy widget-injection layer lands; until then, the
+  // scope-switching helper below is callable directly when needed.
 }
 
-bool FeatureHandler::checkSettingsScopeLicense(
-    QDialog *parent, QRadioButton *systemScope, QRadioButton *userScope, bool showDialog
-) const
+void FeatureHandler::switchScope(QDialog *parent, bool toSystemScope)
 {
   const auto &licenseHandler = LicenseHandler::instance();
-  if (!licenseHandler.isEnabled()) {
-    qDebug("license handler disabled, skipping settings scope check");
-    return true;
-  }
-
-  const auto &license = licenseHandler.license();
-  if (!license.isSettingsScopeAvailable() && systemScope->isChecked()) {
-    qDebug("settings scope not available, showing upgrade dialog");
-    userScope->setChecked(true);
-
-    if (showDialog) {
-      UpgradeDialog dialog(parent);
-      dialog.showDialog(
-          QString("Settings Scope"),
-          QString("Please upgrade to %1 to enable the settings scope feature.").arg(kBusinessProductName), kUrlContact
-      );
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-void FeatureHandler::handleSettingsScopeRadioButton(
-    QDialog *parent, QRadioButton *systemScope, QRadioButton *userScope, bool checked
-) const
-{
-  if (!checkSettingsScopeLicense(parent, systemScope, userScope, true)) {
-    qDebug("settings scope not available, skipping feature handler");
+  if (licenseHandler.isEnabled() && !licenseHandler.license().isSettingsScopeAvailable() && toSystemScope) {
+    qWarning("settings scope not available for this license tier");
     return;
   }
 
   const auto userScopeText = QStringLiteral("current user");
   const auto systemScopeText = QStringLiteral("all users");
-  const auto from = checked ? userScopeText : systemScopeText;
-  const auto to = checked ? systemScopeText : userScopeText;
+  const auto from = toSystemScope ? userScopeText : systemScopeText;
+  const auto to = toSystemScope ? systemScopeText : userScopeText;
   const auto result = QMessageBox::information(
       parent, "Switch settings profile",
       QString("Switching settings from %1 to %2 requires %3 to restart.\n\n"
@@ -103,27 +65,36 @@ void FeatureHandler::handleSettingsScopeRadioButton(
       QMessageBox::Yes | QMessageBox::Cancel
   );
 
-  if (result == QMessageBox::Yes) {
-    auto &systemSettings = m_appConfig->settings().getSystemSettings();
-    systemSettings.loadSystem();
-
-    if (systemSettings.isEmpty()) {
-      qDebug("system settings are empty, copying user settings");
-      systemSettings.copyFrom(m_appConfig->settings().getUserSettings());
-    }
-
-    systemSettings.setValue(kSystemScopeSetting, checked);
-    systemSettings.sync();
-
-    // This seems rather clumsy and un-elegant at first glance, but actually when you consider
-    // the complexities of hot-switching the settings scope while the application is running,
-    // restarting the applocation is actually the lowest maintenance solution.
-    deskflow::gui::diagnostic::restart();
-  } else {
-    if (checked) {
-      userScope->setChecked(true);
-    } else {
-      systemScope->setChecked(true);
-    }
+  if (result != QMessageBox::Yes) {
+    return;
   }
+
+  const auto destFile = toSystemScope ? Settings::SystemSettingFile : Settings::UserSettingFile;
+  const auto sourceFile = toSystemScope ? Settings::UserSettingFile : Settings::SystemSettingFile;
+
+  QSettings dest(destFile, QSettings::IniFormat);
+  if (dest.allKeys().isEmpty()) {
+    qDebug() << "destination settings empty, copying from:" << sourceFile;
+    QSettings source(sourceFile, QSettings::IniFormat);
+    for (const auto &key : source.allKeys()) {
+      dest.setValue(key, source.value(key));
+    }
+    dest.sync();
+  }
+
+  Settings::setSettingsFile(destFile);
+
+  // Hot-switching the active settings file mid-run touches enough state
+  // (signal/slot wiring, cached UI defaults) that a clean restart is the
+  // safest path. Inlined because upstream's `deskflow::gui::diagnostic::restart()`
+  // is defined in Diagnostic.cpp but not declared in the public header.
+  const auto program = QCoreApplication::applicationFilePath();
+  auto arguments = QCoreApplication::arguments();
+  if (const auto resetIndex = arguments.indexOf(QStringLiteral("--reset")); resetIndex != -1) {
+    arguments.remove(resetIndex);
+  }
+  qInfo("launching new process: %s", qPrintable(program));
+  QProcess::startDetached(program, arguments);
+  qDebug("exiting current process");
+  QCoreApplication::exit();
 }

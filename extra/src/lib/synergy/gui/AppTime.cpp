@@ -17,21 +17,17 @@
 
 #include "AppTime.h"
 
-#include <QtCore>
+#include "synergy/gui/TestSettings.h"
 
-using system_clock = std::chrono::system_clock;
-using time_point = system_clock::time_point;
+#include <QtCore>
 
 namespace synergy::gui {
 
-const auto kTestTimeEnvVar = "SYNERGY_TEST_START_TIME";
-
 AppTime::AppTime()
 {
-  m_realStartTime = system_clock::now();
-  if (qEnvironmentVariableIsSet(kTestTimeEnvVar)) {
-    const auto testTime = qEnvironmentVariable(kTestTimeEnvVar).toLongLong();
-    qDebug("setting test time to: %lld", testTime);
+  m_realStartTime = std::chrono::system_clock::now();
+  if (const auto testTime = TestSettings::instance().startTimeEpochSecs(); testTime != 0) {
+    qDebug("setting test time to: %lld", static_cast<long long>(testTime));
     m_testStartTime = std::chrono::seconds{testTime};
   }
 }
@@ -41,13 +37,13 @@ bool AppTime::hasTestTime() const
   return m_testStartTime.has_value();
 }
 
-time_point AppTime::now()
+AppTime::TimePoint AppTime::now()
 {
   if (m_testStartTime.has_value()) {
-    const auto runtime = system_clock::now() - m_realStartTime;
-    return time_point{m_testStartTime.value()} + runtime;
+    const auto runtime = std::chrono::system_clock::now() - m_realStartTime;
+    return TimePoint{m_testStartTime.value()} + runtime;
   }
-  return system_clock::now();
+  return std::chrono::system_clock::now();
 }
 
 } // namespace synergy::gui

@@ -134,24 +134,6 @@ bool Product::isTlsAvailable() const
   }
 }
 
-bool Product::isInvertConnectionAvailable() const
-{
-  switch (edition()) {
-    using enum Edition;
-
-  case kBusiness:
-    return true;
-
-  case kBasic:
-  case kPro:
-  case kUnregistered:
-    return false;
-
-  default:
-    throw InvalidProductEdition();
-  }
-}
-
 bool Product::isSettingsScopeAvailable() const
 {
   switch (edition()) {
@@ -177,9 +159,6 @@ bool Product::isFeatureAvailable(Product::Feature feature) const
 
   case kTls:
     return isTlsAvailable();
-
-  case kInvertConnection:
-    return isInvertConnectionAvailable();
 
   case kSettingsScope:
     return isSettingsScopeAvailable();

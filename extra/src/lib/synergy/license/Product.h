@@ -52,7 +52,6 @@ public:
   enum class Feature
   {
     kTls = 0,
-    kInvertConnection = 1,
     kSettingsScope = 2,
   };
 
@@ -82,7 +81,6 @@ public:
 
 private:
   bool isTlsAvailable() const;
-  bool isInvertConnectionAvailable() const;
   bool isSettingsScopeAvailable() const;
 
   Edition m_edition = Edition::kUnregistered;

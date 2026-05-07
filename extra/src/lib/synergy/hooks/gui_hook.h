@@ -19,12 +19,9 @@
 
 #include "synergy/gui/FeatureHandler.h"
 #include "synergy/gui/license/LicenseHandler.h"
-#include "synergy/hooks/gui_hook_config.h" // IWYU pragma: keep
 
-#include <QCheckBox>
 #include <QDialog>
 #include <QMainWindow>
-#include <QRadioButton>
 
 namespace deskflow::gui {
 class CoreProcess;
@@ -32,10 +29,10 @@ class CoreProcess;
 
 namespace synergy::hooks {
 
-inline void onMainWindow(QMainWindow *mainWindow, AppConfig *appConfig, deskflow::gui::CoreProcess *coreProcess)
+inline void onMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *coreProcess)
 {
-  LicenseHandler::instance().handleMainWindow(mainWindow, appConfig, coreProcess);
-  FeatureHandler::instance().handleMainWindow(appConfig);
+  LicenseHandler::instance().handleMainWindow(mainWindow, coreProcess);
+  FeatureHandler::instance().handleMainWindow(mainWindow);
 }
 
 inline bool onAppStart()
@@ -43,13 +40,10 @@ inline bool onAppStart()
   return LicenseHandler::instance().handleAppStart();
 }
 
-inline void onSettings(
-    QDialog *parent, QCheckBox *enableTls, QCheckBox *invertConnection, QRadioButton *systemScope,
-    QRadioButton *userScope
-)
+inline void onSettings(QDialog *parent)
 {
-  LicenseHandler::instance().handleSettings(parent, enableTls, invertConnection, systemScope, userScope);
-  FeatureHandler::instance().handleSettings(parent, systemScope, userScope);
+  LicenseHandler::instance().handleSettings(parent);
+  FeatureHandler::instance().handleSettings(parent);
 }
 
 inline void onVersionCheck(QString &versionUrl)

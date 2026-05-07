@@ -17,37 +17,44 @@
 
 #include "ExtraSettings.h"
 
-#include <QSettings>
-#include <QtCore>
+#include "common/Settings.h"
 
-using namespace deskflow::gui::proxy;
+#include <QDebug>
 
 namespace synergy::gui {
 
-const auto kSerialKeySettingKey = "serialKey";
-const auto kActivatedSettingKey = "activated";
-const auto kGraceStartSettingKey = "graceStartEpochSecs";
+const auto kSerialKeySettingKey = QStringLiteral("synergy/serialKey");
+const auto kActivatedSettingKey = QStringLiteral("synergy/activated");
+const auto kGraceStartSettingKey = QStringLiteral("synergy/graceStartEpochSecs");
 
 void ExtraSettings::load()
 {
-  const auto &settings = getActiveSettings();
-  m_serialKey = settings.value(kSerialKeySettingKey).toString();
-  m_activated = settings.value(kActivatedSettingKey).toBool();
-  m_graceStartEpochSecs = settings.value(kGraceStartSettingKey).toLongLong();
+  m_serialKey = Settings::value(kSerialKeySettingKey).toString();
+  m_activated = Settings::value(kActivatedSettingKey).toBool();
+  m_graceStartEpochSecs = Settings::value(kGraceStartSettingKey).toLongLong();
 }
 
 void ExtraSettings::sync()
 {
-  auto &settings = getActiveSettings();
-  if (!settings.isWritable()) {
-    qCritical() << "unable to save to settings, file not writable:" << settings.fileName();
+  if (!Settings::isWritable()) {
+    qCritical() << "unable to save synergy settings, file not writable:" << Settings::settingsFile();
     return;
   }
 
-  settings.setValue(kSerialKeySettingKey, m_serialKey);
-  settings.setValue(kActivatedSettingKey, m_activated);
-  settings.setValue(kGraceStartSettingKey, m_graceStartEpochSecs);
-  settings.sync();
+  Settings::setValue(kSerialKeySettingKey, m_serialKey);
+  Settings::setValue(kActivatedSettingKey, m_activated);
+  Settings::setValue(kGraceStartSettingKey, m_graceStartEpochSecs);
+  Settings::save();
+}
+
+QString ExtraSettings::fileName() const
+{
+  return Settings::settingsFile();
+}
+
+bool ExtraSettings::isWritable() const
+{
+  return Settings::isWritable();
 }
 
 } // namespace synergy::gui

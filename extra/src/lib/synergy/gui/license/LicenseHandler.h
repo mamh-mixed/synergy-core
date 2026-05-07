@@ -23,11 +23,8 @@
 #include "synergy/license/License.h"
 #include "synergy/license/Product.h"
 
-class AppConfig;
 class QMainWindow;
 class QDialog;
-class QCheckBox;
-class QRadioButton;
 
 namespace deskflow::gui {
 class CoreProcess;
@@ -61,12 +58,9 @@ public:
     return instance;
   }
 
-  void handleMainWindow(QMainWindow *mainWindow, AppConfig *appConfig, deskflow::gui::CoreProcess *coreProcess);
+  void handleMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *coreProcess);
   bool handleAppStart();
-  void handleSettings(
-      QDialog *parent, QCheckBox *enableTls, QCheckBox *invertConnection, QRadioButton *systemScope,
-      QRadioButton *userScope
-  ) const;
+  void handleSettings(QDialog *parent) const;
   void handleVersionCheck(QString &versionUrl);
   bool handleCoreStart();
   bool loadSettings();
@@ -84,8 +78,6 @@ public:
   }
 
 private:
-  void checkTlsCheckBox(QDialog *parent, QCheckBox *checkBoxEnableTls, bool showDialog) const;
-  void checkInvertConnectionCheckBox(QDialog *parent, QCheckBox *checkBoxInvertConnection, bool showDialog) const;
   void updateWindowTitle() const;
   bool showSerialKeyDialog();
   bool check();
@@ -104,6 +96,5 @@ private:
   synergy::gui::license::LicenseApiClient m_apiClient;
   bool m_warnedAboutGrace = false;
   QMainWindow *m_pMainWindow = nullptr;
-  AppConfig *m_pAppConfig = nullptr;
   deskflow::gui::CoreProcess *m_pCoreProcess = nullptr;
 };

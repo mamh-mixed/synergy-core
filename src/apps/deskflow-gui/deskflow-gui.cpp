@@ -17,6 +17,10 @@
 #include "gui/Messages.h"
 #include "gui/StyleUtils.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QLocalSocket>
@@ -151,6 +155,12 @@ int main(int argc, char *argv[])
 
   MainWindow mainWindow;
   mainWindow.open();
+
+#ifdef SYNERGY_EXTRA_HEADER
+  if (!synergy::hooks::onAppStart()) {
+    return s_exitFailed;
+  }
+#endif
 
   return QApplication::exec();
 }

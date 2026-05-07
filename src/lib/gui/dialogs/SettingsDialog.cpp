@@ -18,6 +18,10 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/NetworkMonitor.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
@@ -81,6 +85,10 @@ SettingsDialog::SettingsDialog(QWidget *parent, const ServerConfig &serverConfig
 
   setButtonBoxEnabledButtons();
   initConnections();
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onSettings(this);
+#endif
 }
 
 void SettingsDialog::changeEvent(QEvent *e)
