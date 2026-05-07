@@ -33,6 +33,8 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, ServerConfig &config)
 {
   ui->setupUi(this);
 
+  ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
+
   m_originalProtocol = Settings::value(Settings::Server::Protocol).value<NetworkProtocol>();
   connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &ServerConfigDialog::accept);
   connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &ServerConfigDialog::reject);

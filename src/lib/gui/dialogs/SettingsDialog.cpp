@@ -11,6 +11,7 @@
 #include "common/PlatformInfo.h"
 #include "ui_SettingsDialog.h"
 
+#include "common/Constants.h"
 #include "common/I18N.h"
 #include "common/Settings.h"
 #include "gui/Messages.h"
@@ -31,6 +32,8 @@ SettingsDialog::SettingsDialog(QWidget *parent, const ServerConfig &serverConfig
 {
 
   ui->setupUi(this);
+
+  ui->lblWlClipboard->setText(ui->lblWlClipboard->text().arg(kAppName));
 
   // these are enabled by the control next to them
   ui->lineCommandEnter->setEnabled(false);
