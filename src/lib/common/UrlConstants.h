@@ -6,12 +6,14 @@
 
 #pragma once
 
+#include "common/Constants.h"
+
 #include <QString>
 
 // important: this is used for settings paths on some platforms,
 // and must not be a url. qt automatically converts this to reverse domain
 // notation (rdn), e.g. org.deskflow
-const auto kOrgDomain = QStringLiteral("@CMAKE_PROJECT_DOMAIN@");
+const auto kOrgDomain = QString::fromUtf8(kAppDomain);
 
 const auto kUrlSourceQuery = QStringLiteral("source=gui");
 const auto kUrlApp = QStringLiteral("https://%1").arg(kOrgDomain);

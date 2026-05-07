@@ -10,7 +10,6 @@ unset(_basename)
 
 configure_file(Constants.h.in Constants.h @ONLY)
 configure_file(VersionInfo.h.in VersionInfo.h @ONLY)
-configure_file(UrlConstants.h.in UrlConstants.h @ONLY)
 
 add_library(common STATIC
   Coordinate.h
@@ -25,8 +24,8 @@ add_library(common STATIC
   Settings.cpp
   QSettingsProxy.cpp
   QSettingsProxy.h
+  UrlConstants.h
   ${CMAKE_CURRENT_BINARY_DIR}/Constants.h
-  ${CMAKE_CURRENT_BINARY_DIR}/UrlConstants.h
   ${CMAKE_CURRENT_BINARY_DIR}/VersionInfo.h
 )
 

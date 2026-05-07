@@ -1,7 +1,7 @@
 /*
  * Deskflow -- mouse and keyboard sharing utility
  * SPDX-FileCopyrightText: (C) 2024 - 2025 Chris Rizzitello <sithlord48@gmail.com>
- * SPDX-FileCopyrightText: (C) 2025 Symless Ltd.
+ * SPDX-FileCopyrightText: (C) 2025 - 2026 Symless Ltd.
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
@@ -10,13 +10,14 @@
 const auto kAppName = "@CMAKE_PROJECT_PROPER_NAME@";
 const auto kAppId = "@CMAKE_PROJECT_NAME@";
 const auto kAppDescription = "@CMAKE_PROJECT_DESCRIPTION@";
+const auto kAppDomain = "@CMAKE_PROJECT_DOMAIN@";
 const auto kDaemonBinName = "@CMAKE_PROJECT_NAME@-daemon";
 const auto kDaemonIpcName = "@CMAKE_PROJECT_NAME@-daemon";
 const auto kRevFqdnName = "@CMAKE_PROJECT_REV_FQDN@";
 
 const auto kCopyright = //
     "Copyright @CMAKE_PROJECT_COPYRIGHT@\n"
-    "Copyright (C) 2012-2025 Symless Ltd.\n"
+    "Copyright (C) 2012-2026 Symless Ltd.\n"
     "Copyright (C) 2009-2012 Nick Bolton\n"
     "Copyright (C) 2002-2009 Chris Schoeneman";
 

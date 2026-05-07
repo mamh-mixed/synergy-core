@@ -8,6 +8,7 @@ set(CMAKE_PROJECT_VENDOR "Symless Ltd")
 set(CMAKE_PROJECT_COPYRIGHT "(C) 2012-2026 ${CMAKE_PROJECT_VENDOR}")
 set(CMAKE_PROJECT_CONTACT "${CMAKE_PROJECT_PROPER_NAME} <support@symless.com>")
 set(CMAKE_PROJECT_REV_FQDN "com.symless.synergy")
+set(CMAKE_PROJECT_DOMAIN "symless.com")
 set(CMAKE_PROJECT_HOMEPAGE_URL "https://symless.com/synergy")
 
 # Don't run unit tests as part of the build. Devs can opt back in with
