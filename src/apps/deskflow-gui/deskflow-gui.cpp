@@ -67,6 +67,10 @@ int main(int argc, char *argv[])
 
   QApplication app(argc, argv);
 
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onPreInit();
+#endif
+
   // Ensure the I18N object is made before strings
   QTextStream(stdout) << "initial language: " << I18N::currentLanguage() << '\n';
 

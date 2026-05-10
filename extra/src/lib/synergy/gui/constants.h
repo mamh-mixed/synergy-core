@@ -28,8 +28,8 @@ namespace synergy::gui {
 const auto kProProductName = "Synergy 1 Pro";
 const auto kBusinessProductName = "Synergy 1 Business";
 
-const auto kUrlApi = "https://synergyapp.io/api";
-const auto kUrlWebsite = QStringLiteral("https://%1").arg(kAppDomain);
+const auto kUrlApi = "https://symless.com/synergy/api";
+const auto kUrlWebsite = QStringLiteral("https://synergyapp.io");
 const auto kUrlSourceQuery = "source=gui";
 
 const auto kLinkBuy = R"(<a href="%1" style="color: %2">Buy now</a>)";

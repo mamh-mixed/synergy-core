@@ -17,7 +17,9 @@
 
 #pragma once
 
+#include "common/Settings.h"
 #include "synergy/gui/FeatureHandler.h"
+#include "synergy/gui/SettingsMigration.h"
 #include "synergy/gui/license/LicenseHandler.h"
 
 #include <QDialog>
@@ -29,10 +31,25 @@ class CoreProcess;
 
 namespace synergy::hooks {
 
+// Runs before any Settings::value() call, so that legacy-format keys can be
+// migrated to the new format before upstream's cleanSettings() wipes them.
+inline void onPreInit()
+{
+  synergy::gui::migration::migrateIfNeeded();
+
+  // If the legacy user scope was running on system scope, switch the new
+  // Settings to system scope so the user's preference is honored across
+  // the upgrade. setSettingsFile() instantiates Settings; that's expected.
+  if (synergy::gui::migration::preferSystemScope()) {
+    Settings::setSettingsFile(Settings::SystemSettingFile);
+  }
+}
+
 inline void onMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *coreProcess)
 {
   LicenseHandler::instance().handleMainWindow(mainWindow, coreProcess);
   FeatureHandler::instance().handleMainWindow(mainWindow);
+  synergy::gui::migration::showNoticeIfPending(mainWindow);
 }
 
 inline bool onAppStart()
