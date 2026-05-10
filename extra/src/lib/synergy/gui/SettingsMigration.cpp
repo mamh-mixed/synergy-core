@@ -69,8 +69,6 @@ void writeNotifiedVersion(int version)
   ini.sync();
 }
 
-// Maps a legacy key + value to the new (key, value) pair, or returns
-// nullopt to drop. Special cases (boolean → enum) handled inline.
 std::optional<std::pair<QString, QVariant>> mapKey(const QString &oldKey, const QVariant &value)
 {
   if (oldKey == "screenName") {
@@ -155,20 +153,17 @@ std::optional<std::pair<QString, QVariant>> mapKey(const QString &oldKey, const 
   return std::nullopt;
 }
 
-// Sentinel keys that indicate a QSettings instance holds legacy-format
-// data (Synergy 1.x, pre-Settings::* API). Detection by sentinel rather
-// than file existence is necessary because on Linux the legacy NativeFormat
-// path coincides with beta's IniFormat path.
+// File-existence isn't a usable signal: on Linux the legacy NativeFormat
+// path coincides with the new IniFormat path, so the file is always
+// "present". Sentinel keys discriminate.
 bool looksLikeLegacy(const QSettings &legacy)
 {
   return legacy.contains(QStringLiteral("startedBefore")) || legacy.contains(QStringLiteral("groupServerChecked")) ||
          legacy.contains(QStringLiteral("groupClientChecked")) || legacy.contains(kLegacySystemScopeKey);
 }
 
-// Dumps every key/value from `legacy` into a sibling INI file. Cross-platform
-// backup — works whether legacy lives in a file (Linux), a plist (macOS),
-// or the registry (Windows), because we're dumping the in-memory contents,
-// not file-copying.
+// Dumps in-memory contents instead of file-copying so the backup format is
+// uniform regardless of the legacy backend (file, plist, or registry).
 QString backupLegacy(const QSettings &legacy, const QString &destPath)
 {
   if (QFile::exists(destPath)) {
@@ -182,8 +177,15 @@ QString backupLegacy(const QSettings &legacy, const QString &destPath)
   return destPath;
 }
 
-// Returns true iff at least one key was migrated from `legacy` to the
-// QSettings instance at `newPath`.
+// Master had hardcoded behavior where beta exposes settings; align beta's
+// defaults with master's runtime behavior so migrated users see no change.
+void applyMasterCompatDefaults(const QString &newPath)
+{
+  QSettings newSettings(newPath, QSettings::IniFormat);
+  newSettings.setValue(Settings::Gui::AutoStartCore, true);
+  newSettings.sync();
+}
+
 int migrateOneScope(QSettings &legacy, const QString &newPath)
 {
   QSettings newSettings(newPath, QSettings::IniFormat);
@@ -205,19 +207,14 @@ int migrateOneScope(QSettings &legacy, const QString &newPath)
 bool s_migrationRanThisLaunch = false;
 QString s_lastBackupPath;
 
-// True iff `legacy`'s storage backend points at the same on-disk file as
-// `newPath`. On Linux this is the case (NativeFormat → INI at the same
-// QStandardPaths location upstream's Settings uses); on macOS/Windows
-// they're separate (plist / registry vs. our explicit IniFormat path).
-// When same, we MUST NOT clear() the legacy storage — that would wipe
-// the new keys we just wrote.
+// On Linux, NativeFormat resolves to the same file beta's Settings uses,
+// so clear() on the legacy QSettings would wipe the keys we just wrote.
+// On macOS/Windows the storage backends are distinct (plist / registry).
 bool sharesPathWith(const QSettings &legacy, const QString &newPath)
 {
   const auto legacyCanonical = QFileInfo(legacy.fileName()).canonicalFilePath();
   const auto newCanonical = QFileInfo(newPath).canonicalFilePath();
   if (legacyCanonical.isEmpty() || newCanonical.isEmpty()) {
-    // canonicalFilePath returns empty if the file doesn't exist; fall back
-    // to absolute path comparison.
     return QFileInfo(legacy.fileName()).absoluteFilePath() == QFileInfo(newPath).absoluteFilePath();
   }
   return legacyCanonical == newCanonical;
@@ -226,10 +223,7 @@ bool sharesPathWith(const QSettings &legacy, const QString &newPath)
 void maybeClearLegacy(QSettings &legacy, const QString &newPath, const char *scopeLabel)
 {
   if (sharesPathWith(legacy, newPath)) {
-    qDebug(
-        "settings migration: %s legacy shares storage with new file, skipping clear (cleanSettings will handle)",
-        scopeLabel
-    );
+    qDebug("settings migration: %s legacy shares storage with new file, skipping clear", scopeLabel);
     return;
   }
   if (!legacy.isWritable()) {
@@ -245,7 +239,6 @@ bool runLegacyMigration()
 {
   bool any = false;
 
-  // User scope.
   QSettings legacyUser(QSettings::NativeFormat, QSettings::UserScope, kAppName, kAppName);
   const bool legacyHadSystemScope = legacyUser.value(kLegacySystemScopeKey, false).toBool();
   if (looksLikeLegacy(legacyUser)) {
@@ -253,11 +246,11 @@ bool runLegacyMigration()
     qInfo().noquote() << "settings migration: user-scope legacy backed up to" << s_lastBackupPath;
     if (migrateOneScope(legacyUser, Settings::UserSettingFile) > 0) {
       any = true;
+      applyMasterCompatDefaults(Settings::UserSettingFile);
     }
     maybeClearLegacy(legacyUser, Settings::UserSettingFile, "user-scope");
   }
 
-  // System scope.
   QSettings legacySystem(QSettings::NativeFormat, QSettings::SystemScope, kAppName, kAppName);
   if (looksLikeLegacy(legacySystem)) {
     const auto backupPath = Settings::SystemSettingFile + QStringLiteral(".legacy.bak");
@@ -265,12 +258,11 @@ bool runLegacyMigration()
     qInfo().noquote() << "settings migration: system-scope legacy backed up to" << s_lastBackupPath;
     if (migrateOneScope(legacySystem, Settings::SystemSettingFile) > 0) {
       any = true;
+      applyMasterCompatDefaults(Settings::SystemSettingFile);
     }
     maybeClearLegacy(legacySystem, Settings::SystemSettingFile, "system-scope");
   }
 
-  // If legacy user-scope had systemScope=true, the user's preference is to
-  // run on system scope. Persist for the post-Settings hook to pick up.
   if (legacyHadSystemScope) {
     QSettings extra(extraFile(), QSettings::IniFormat);
     extra.setValue(QStringLiteral("migration/preferSystemScope"), true);

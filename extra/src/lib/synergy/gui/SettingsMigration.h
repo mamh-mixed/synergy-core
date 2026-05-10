@@ -21,29 +21,38 @@ class QWidget;
 
 namespace synergy::gui::migration {
 
-// Bumped each time a new migration is added. Stored as
-// migration/schemaVersion in Synergy.extra.conf so we don't re-run.
+/// Bumped each time a new migration is added.
 constexpr int kCurrentSchemaVersion = 1;
 
-// Reads legacy-format keys (Synergy 1.x — QSettings::NativeFormat,
-// user + system scope) and writes their new-format equivalents BEFORE
-// upstream Settings is initialized, since Settings::cleanSettings()
-// strips any key not in its allow-list. Backs up the original key set
-// to <newPath>.legacy.bak before any modification. Idempotent — no-op
-// if migration/schemaVersion is already current.
-//
-// Returns true iff a migration ran this launch (caller can show a notice).
+/**
+ * @brief Ports legacy-format settings (Synergy 1.x, both user and system
+ * scope, native QSettings backend) into the new Settings layout.
+ *
+ * Must run before Settings::instance() is constructed: upstream's
+ * cleanSettings() strips any key not in its allow-list, which would erase
+ * the legacy keys before this can read them. Idempotent — gated on
+ * migration/schemaVersion in Synergy.extra.conf.
+ *
+ * @return true if a migration was performed this launch.
+ */
 bool migrateIfNeeded();
 
-// True iff the legacy user scope had `systemScope=true`. Caller can use
-// this after Settings::instance() is up to call
-// Settings::setSettingsFile(SystemSettingFile) and honor the user's
-// scope preference across the upgrade. Persisted in Synergy.extra.conf
-// as `migration/preferSystemScope` so subsequent launches keep honoring it.
+/**
+ * @brief Whether the legacy user scope had `systemScope=true`, recorded
+ * during migration so subsequent launches keep honoring it.
+ *
+ * Caller should consult this after Settings::instance() is up and call
+ * Settings::setSettingsFile(SystemSettingFile) accordingly.
+ */
 bool preferSystemScope();
 
-// Modal one-time notice shown after MainWindow is open. No-op if not
-// pending. Marks migration/notifiedFor=schemaVersion when dismissed.
+/**
+ * @brief Modal one-time notice shown after MainWindow is open.
+ *
+ * No-op unless a migration ran since the last call. Marks
+ * migration/notifiedFor=schemaVersion when dismissed so a new migration
+ * (bumped schema version) shows the popup again.
+ */
 void showNoticeIfPending(QWidget *parent);
 
 } // namespace synergy::gui::migration
