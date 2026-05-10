@@ -20,6 +20,7 @@
 #include "common/Settings.h"
 #include "synergy/gui/FeatureHandler.h"
 #include "synergy/gui/SettingsMigration.h"
+#include "synergy/gui/SettingsScope.h"
 #include "synergy/gui/license/LicenseHandler.h"
 
 #include <QDialog>
@@ -37,11 +38,14 @@ inline void onPreInit()
 {
   synergy::gui::migration::migrateIfNeeded();
 
-  // If the legacy user scope was running on system scope, switch the new
-  // Settings to system scope so the user's preference is honored across
-  // the upgrade. setSettingsFile() instantiates Settings; that's expected.
-  if (synergy::gui::migration::preferSystemScope()) {
-    Settings::setSettingsFile(Settings::SystemSettingFile);
+  // setSettingsFile() instantiates Settings; that's expected here.
+  if (synergy::gui::SettingsScope::preferSystem()) {
+    if (synergy::gui::SettingsScope::isSystemWritable()) {
+      Settings::setSettingsFile(Settings::SystemSettingFile);
+    } else {
+      qWarning("scope: system-scope no longer writable, falling back to user scope");
+      synergy::gui::SettingsScope::setPreferSystem(false);
+    }
   }
 }
 

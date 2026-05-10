@@ -38,15 +38,6 @@ constexpr int kCurrentSchemaVersion = 1;
 bool migrateIfNeeded();
 
 /**
- * @brief Whether the legacy user scope had `systemScope=true`, recorded
- * during migration so subsequent launches keep honoring it.
- *
- * Caller should consult this after Settings::instance() is up and call
- * Settings::setSettingsFile(SystemSettingFile) accordingly.
- */
-bool preferSystemScope();
-
-/**
  * @brief Modal one-time notice shown after MainWindow is open.
  *
  * No-op unless a migration ran since the last call. Marks

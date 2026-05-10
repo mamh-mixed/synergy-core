@@ -19,6 +19,7 @@
 
 #include "common/Constants.h"
 #include "common/Settings.h"
+#include "synergy/gui/SettingsScope.h"
 
 #include <QDebug>
 #include <QFile>
@@ -264,9 +265,7 @@ bool runLegacyMigration()
   }
 
   if (legacyHadSystemScope) {
-    QSettings extra(extraFile(), QSettings::IniFormat);
-    extra.setValue(QStringLiteral("migration/preferSystemScope"), true);
-    extra.sync();
+    SettingsScope::setPreferSystem(true);
   }
 
   return any;
@@ -283,12 +282,6 @@ bool migrateIfNeeded()
   s_migrationRanThisLaunch = runLegacyMigration();
   writeSchemaVersion(kCurrentSchemaVersion);
   return s_migrationRanThisLaunch;
-}
-
-bool preferSystemScope()
-{
-  QSettings extra(extraFile(), QSettings::IniFormat);
-  return extra.value(QStringLiteral("migration/preferSystemScope"), false).toBool();
 }
 
 void showNoticeIfPending(QWidget *parent)
