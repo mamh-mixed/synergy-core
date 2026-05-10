@@ -1060,7 +1060,7 @@ void MainWindow::updateText()
   m_menuHelp->setTitle(tr("&Help"));
 
   m_actionClearSettings->setText(tr("Clear settings"));
-  m_actionReportBug->setText(tr("Report a Bug"));
+  m_actionReportBug->setText(tr("Get help"));
   m_actionMinimize->setText(tr("&Minimize to tray"));
   m_actionQuit->setText(tr("&Quit"));
   m_actionTrayQuit->setText(tr("&Quit"));
