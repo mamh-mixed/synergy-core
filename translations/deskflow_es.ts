@@ -374,10 +374,6 @@ Do you want to connect to the server?
         <translation type="unfinished">Borrar configuración</translation>
     </message>
     <message>
-        <source>Report a Bug</source>
-        <translation type="unfinished">Informar un error</translation>
-    </message>
-    <message>
         <source>&amp;Minimize to tray</source>
         <translation type="unfinished">&amp;Minimizar a la bandeja</translation>
     </message>
@@ -464,6 +460,10 @@ Do you want to connect to the server?
     <message>
         <source>%1 Connection Error</source>
         <translation>%1 Error de conexión</translation>
+    </message>
+    <message>
+        <source>Get help</source>
+        <translation type="unfinished">Obtener ayuda</translation>
     </message>
     <message>
         <source>No IP Detected</source>

@@ -422,6 +422,10 @@ Do you want to connect to the server?
         <translation>&lt;p&gt;서버 &apos;%1&apos;에 연결하지 못했습니다.&lt;/p&gt;&lt;p&gt;같은 이름의 클라이언트가 이미 서버에 연결되어 있습니다.&lt;/p&gt;&lt;p&gt;고유한 이름을 사용하고, 클라이언트 프로세스가 하나만 실행 중인지 확인하세요.&lt;/p&gt;</translation>
     </message>
     <message>
+        <source>Get help</source>
+        <translation type="unfinished">도움 받기</translation>
+    </message>
+    <message>
         <source>No IP Detected</source>
         <translation>IP를 감지하지 못했습니다</translation>
     </message>
@@ -470,10 +474,6 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>Clear settings</source>
         <translation>설정 초기화</translation>
-    </message>
-    <message>
-        <source>Report a Bug</source>
-        <translation>버그 신고</translation>
     </message>
     <message>
         <source>&amp;Minimize to tray</source>

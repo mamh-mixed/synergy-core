@@ -362,10 +362,6 @@ Vuoi connetterti al server?
         <translation>Cancella impostazioni</translation>
     </message>
     <message>
-        <source>Report a Bug</source>
-        <translation>Segnala un Bug</translation>
-    </message>
-    <message>
         <source>&amp;Minimize to tray</source>
         <translation>&amp;Minimizza a icona</translation>
     </message>
@@ -452,6 +448,10 @@ Vuoi connetterti al server?
     <message>
         <source>%1 Connection Error</source>
         <translation>Errore di connessione %1</translation>
+    </message>
+    <message>
+        <source>Get help</source>
+        <translation type="unfinished">Ottieni aiuto</translation>
     </message>
     <message>
         <source>No IP Detected</source>

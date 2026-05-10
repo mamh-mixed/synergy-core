@@ -422,6 +422,10 @@ Do you want to connect to the server?
         <translation>&lt;p&gt;Не удалось подключиться к серверу &apos;%1&apos;.&lt;/p&gt;&lt;p&gt;Клиент с таким именем уже подключен к серверу.&lt;/p&gt;Убедитесь, что вы используете уникальное имя и запущен только один процесс клиента.&lt;/p&gt;</translation>
     </message>
     <message>
+        <source>Get help</source>
+        <translation type="unfinished">Получить помощь</translation>
+    </message>
+    <message>
         <source>No IP Detected</source>
         <translation>IP-адрес не обнаружен</translation>
     </message>
@@ -470,10 +474,6 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>Clear settings</source>
         <translation>Сбросить настройки</translation>
-    </message>
-    <message>
-        <source>Report a Bug</source>
-        <translation>Сообщить об ошибке</translation>
     </message>
     <message>
         <source>&amp;Minimize to tray</source>
