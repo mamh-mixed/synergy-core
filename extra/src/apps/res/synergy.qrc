@@ -2,5 +2,9 @@
     <qresource>
         <file>image/logo-dark.png</file>
         <file>image/logo-light.png</file>
+        <file alias="icons/synergy-dark/apps/64/com.symless.synergy.svg">synergy.svg</file>
+        <file alias="icons/synergy-dark/apps/64/com.symless.synergy-symbolic.svg">synergy.svg</file>
+        <file alias="icons/synergy-light/apps/64/com.symless.synergy.svg">synergy.svg</file>
+        <file alias="icons/synergy-light/apps/64/com.symless.synergy-symbolic.svg">synergy.svg</file>
     </qresource>
 </RCC>
