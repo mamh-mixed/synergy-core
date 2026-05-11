@@ -201,7 +201,7 @@ int migrateOneScope(QSettings &legacy, const QString &newPath)
     }
   }
   newSettings.sync();
-  qInfo("settings migration: scope %s — migrated %d keys, dropped %d obsolete", qPrintable(newPath), migrated, dropped);
+  qInfo("settings migration: scope %s, migrated %d keys, dropped %d obsolete", qPrintable(newPath), migrated, dropped);
   return migrated;
 }
 

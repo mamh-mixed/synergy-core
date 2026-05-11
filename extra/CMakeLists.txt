@@ -16,7 +16,7 @@ if(TARGET gui)
   target_compile_definitions(gui PRIVATE SYNERGY_EXTRA_HEADER)
   target_include_directories(gui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/lib)
   # Cascade synergy-gui to anything that links gui (the synergy executable,
-  # but also unit tests that link libgui.a — they pull in MainWindow.cpp.o
+  # but also unit tests that link libgui.a, which pull in MainWindow.cpp.o
   # which now references synergy::hooks::* symbols). Plain signature matches
   # upstream's gui CMakeLists.
   target_link_libraries(gui synergy-gui)

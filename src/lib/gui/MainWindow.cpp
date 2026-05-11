@@ -716,6 +716,9 @@ void MainWindow::applyConfig()
   } else {
     setWindowTitle(kAppName);
   }
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onTitleApplied(this);
+#endif
 
   if (const auto host = Settings::value(Settings::Client::RemoteHost).toString(); !host.isEmpty())
     ui->lineHostname->setText(host);

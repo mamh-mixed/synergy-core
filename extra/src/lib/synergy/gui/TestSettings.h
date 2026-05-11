@@ -55,7 +55,7 @@ public:
   QString apiUrlCheck() const;
   qint64 startTimeEpochSecs() const;
 
-  // Feature toggles read from the [features] section. File-only — no env
+  // Feature toggles read from the [features] section. File-only, no env
   // var fallback for these (no precedent).
   bool verbose() const
   {

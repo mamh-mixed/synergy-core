@@ -18,9 +18,11 @@
 #pragma once
 
 #include "common/Settings.h"
+#include "synergy/build_config.h"
 #include "synergy/gui/FeatureHandler.h"
 #include "synergy/gui/SettingsMigration.h"
 #include "synergy/gui/SettingsScope.h"
+#include "synergy/gui/dev_mode.h"
 #include "synergy/gui/license/LicenseHandler.h"
 
 #include <QDialog>
@@ -54,6 +56,11 @@ inline void onMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *co
   LicenseHandler::instance().handleMainWindow(mainWindow, coreProcess);
   FeatureHandler::instance().handleMainWindow(mainWindow);
   synergy::gui::migration::showNoticeIfPending(mainWindow);
+}
+
+inline void onTitleApplied(QMainWindow *mainWindow)
+{
+  mainWindow->setWindowTitle(synergy::gui::titleWithDevSuffix(synergy::kDisplayName));
 }
 
 inline bool onAppStart()

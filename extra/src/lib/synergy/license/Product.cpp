@@ -18,10 +18,11 @@
 #include <map>
 
 #include "Product.h"
+#include "synergy/build_config.h"
 
 using SKE = Product::SerialKeyEditionID;
 
-const char *const kLicensedProductName = "Synergy 1";
+const char *const kLicensedProductName = synergy::kDisplayName;
 
 const std::string SKE::Pro = "pro";
 const std::string SKE::Basic = "basic";

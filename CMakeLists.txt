@@ -164,8 +164,12 @@ endif()
 
 add_subdirectory(docs)
 
+option(BUILD_GUI "Build GUI" ON)
+
 # build translations before source, I18N unit tests fail if they are missing
-add_subdirectory(translations)
+if(BUILD_GUI)
+  add_subdirectory(translations)
+endif()
 
 add_subdirectory(src)
 add_subdirectory(extra)

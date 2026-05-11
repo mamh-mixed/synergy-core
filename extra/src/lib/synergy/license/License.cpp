@@ -22,7 +22,6 @@
 #include "synergy/license/parse_serial_key.h"
 
 #include <chrono>
-#include <climits>
 
 using namespace std::chrono;
 

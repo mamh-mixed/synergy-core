@@ -23,6 +23,7 @@
 #include "dialogs/UpgradeDialog.h"
 #include "gui/core/CoreProcess.h"
 #include "synergy/gui/constants.h"
+#include "synergy/gui/dev_mode.h"
 #include "synergy/gui/license/license_utils.h"
 #include "synergy/gui/styles.h"
 #include "synergy/license/Product.h"
@@ -116,7 +117,6 @@ bool LicenseHandler::handleAppStart()
 
   if (!m_enabled) {
     qDebug("license handler disabled, skipping start handler");
-    m_pMainWindow->setWindowTitle(kAppName);
     return true;
   }
 
@@ -288,7 +288,7 @@ void LicenseHandler::updateWindowTitle() const
 {
   const auto productName = QString::fromStdString(m_license.productName());
   qDebug("updating main window title: %s", qPrintable(productName));
-  m_pMainWindow->setWindowTitle(productName);
+  m_pMainWindow->setWindowTitle(synergy::gui::titleWithDevSuffix(productName));
 }
 
 const synergy::license::License &LicenseHandler::license() const

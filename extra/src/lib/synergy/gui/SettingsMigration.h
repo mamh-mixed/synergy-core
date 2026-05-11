@@ -30,7 +30,7 @@ constexpr int kCurrentSchemaVersion = 1;
  *
  * Must run before Settings::instance() is constructed: upstream's
  * cleanSettings() strips any key not in its allow-list, which would erase
- * the legacy keys before this can read them. Idempotent — gated on
+ * the legacy keys before this can read them. Idempotent, gated on
  * migration/schemaVersion in Synergy.extra.conf.
  *
  * @return true if a migration was performed this launch.

@@ -17,16 +17,11 @@
 
 #pragma once
 
-#include "common/Constants.h"
-
 #include <QString>
 
-#include <chrono>
+#include <bits/chrono.h>
 
 namespace synergy::gui {
-
-const auto kProProductName = "Synergy 1 Pro";
-const auto kBusinessProductName = "Synergy 1 Business";
 
 const auto kUrlApi = "https://symless.com/synergy/api";
 const auto kUrlWebsite = QStringLiteral("https://synergyapp.io");
