@@ -45,7 +45,7 @@ bool isActivationEnabled()
   if (strToTrue(qEnvironmentVariable("SYNERGY_ENABLE_ACTIVATION"))) {
     return true;
   }
-  if (synergy::gui::TestSettings::instance().isEnabled()) {
+  if (synergy::gui::TestSettings::instance().isLicensingEnabled()) {
     return true;
   }
   return kEnableActivation;

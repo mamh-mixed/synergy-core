@@ -54,6 +54,7 @@ TestSettings::TestSettings()
 void TestSettings::load()
 {
   m_enabled = false;
+  m_licensing = false;
   m_serialKey.clear();
   m_apiUrlActivate.clear();
   m_apiUrlCheck.clear();
@@ -73,6 +74,7 @@ void TestSettings::load()
     qDebug().noquote() << "test settings file present but test/enabled=false:" << m_fileName;
     return;
   }
+  m_licensing = ini.value(QStringLiteral("test/licensing"), false).toBool();
   m_serialKey = ini.value(QStringLiteral("test/serialKey")).toString();
   m_apiUrlActivate = ini.value(QStringLiteral("test/apiUrlActivate")).toString();
   m_apiUrlCheck = ini.value(QStringLiteral("test/apiUrlCheck")).toString();

@@ -33,11 +33,19 @@ class TestSettings
 public:
   static TestSettings &instance();
 
-  // True iff the test config file exists and `[test]/enabled=true`. The
+  // True when the test config file exists and `[test]/enabled=true`. The
   // value is cached at construction; call reload() to re-read.
   bool isEnabled() const
   {
     return m_enabled;
+  }
+
+  // True when test mode is on AND `[test]/licensing=true`. Drives the
+  // license activation flow when set; off by default so test mode can be
+  // on (Test menu, URL overrides, etc.) without forcing license prompts.
+  bool isLicensingEnabled() const
+  {
+    return m_enabled && m_licensing;
   }
 
   // Test overrides. Each accessor returns the env var when set, otherwise
@@ -80,6 +88,7 @@ private:
 
   QString m_fileName;
   bool m_enabled = false;
+  bool m_licensing = false;
   QString m_serialKey;
   QString m_apiUrlActivate;
   QString m_apiUrlCheck;
