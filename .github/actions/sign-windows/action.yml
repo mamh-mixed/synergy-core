@@ -25,8 +25,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # Stage the shipped binaries (excluding test executables) so a single OTP
-    # signs them all in one batch_sign call.
     - name: Stage binaries for batch signing
       shell: pwsh
       run: |
