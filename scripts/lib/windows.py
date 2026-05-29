@@ -18,13 +18,11 @@ import xml.etree.ElementTree as ET
 import lib.cmd_utils as cmd_utils
 import lib.env as env
 import psutil  # type: ignore
-from lib.certificate import Certificate
 import lib.colors as colors
 import lib.file_utils as file_utils
 
 LOCK_FILE = "tmp/elevated.lock"
 MSBUILD_CMD = "msbuild"
-SIGNTOOL_CMD = "signtool"
 CERTUTIL_CMD = "certutil"
 RUNNER_TEMP_ENV = "RUNNER_TEMP"
 SERVICE_NOT_RUNNING_ERROR = 2
@@ -102,20 +100,7 @@ def set_env_var(name, value):
 
 
 def package(filename_base, build_dir, dist_dir):
-    cert_env_key = "WINDOWS_PFX_CERTIFICATE"
-    cert_base64 = env.get_env(cert_env_key, required=False)
-    packager = WindowsPackager(filename_base, build_dir, dist_dir)
-
-    if cert_base64:
-        cert_password = env.get_env("WINDOWS_PFX_PASSWORD")
-        packager.sign_binaries(cert_base64, cert_password)
-
-    packager.build_msi()
-
-    if cert_base64:
-        packager.sign_msi(cert_base64, cert_password)
-    else:
-        print(f"Skipped code signing, env var not set: {cert_env_key}")
+    WindowsPackager(filename_base, build_dir, dist_dir).build_msi()
 
 
 def assert_vs_cmd(cmd):
@@ -124,32 +109,6 @@ def assert_vs_cmd(cmd):
         raise RuntimeError(
             f"The '{cmd}' command was not found, "
             "re-run from 'Developer Command Prompt for VS'"
-        )
-
-
-def run_codesign(path, cert_base64, cert_password):
-    time_server = "http://timestamp.digicert.com"
-    hashing_algorithm = "SHA256"
-
-    with Certificate(cert_base64, "pfx") as cert_path:
-        print("Signing MSI installer...")
-        assert_vs_cmd(SIGNTOOL_CMD)
-
-        # WARNING: contains private key password, never print this command
-        cmd_utils.run(
-            [
-                SIGNTOOL_CMD,
-                "sign",
-                "/f",
-                cert_path,
-                "/p",
-                cert_password,
-                "/t",
-                time_server,
-                "/fd",
-                hashing_algorithm,
-                path,
-            ]
         )
 
 
@@ -186,14 +145,6 @@ class WindowsPackager:
 
     def get_package_path(self):
         return f"{self.dist_dir}/{self.filename_base}.msi"
-
-    def sign_binaries(self, cert_base64, cert_password):
-        exe_pattern = f"{self.build_dir}/bin/*.exe"
-        run_codesign(exe_pattern, cert_base64, cert_password)
-
-    def sign_msi(self, cert_base64, cert_password):
-        path = self.get_package_path()
-        run_codesign(path, cert_base64, cert_password)
 
 
 class WindowsChoco:
