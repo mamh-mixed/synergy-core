@@ -24,14 +24,6 @@ on:
         description: "Only build one target (e.g. ubuntu-24.04-x86_64)"
         required: false
         type: string
-      environment:
-        description: "SSL.com signing environment (use TEST for sandbox dry-runs)"
-        required: false
-        default: "PROD"
-        type: choice
-        options:
-          - PROD
-          - TEST
   push:
     branches:
       - master*
@@ -256,7 +248,6 @@ jobs:
         uses: ./.github/actions/release-windows
         with:
           should-sign: ${{ env.SYNERGY_VERSION_RELEASE }}
-          environment-name: ${{ github.event.inputs.environment || 'PROD' }}
           ssl-username: ${{ secrets.SSL_USERNAME }}
           ssl-password: ${{ secrets.SSL_PASSWORD }}
           ssl-credential-id: ${{ secrets.SSL_CREDENTIAL_ID }}

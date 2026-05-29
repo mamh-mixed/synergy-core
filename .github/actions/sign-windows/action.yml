@@ -21,10 +21,6 @@ inputs:
   staging-dir:
     description: "Temp directory used to batch_sign all binaries with one OTP"
     required: true
-  environment-name:
-    description: "SSL.com environment (PROD or TEST)"
-    required: false
-    default: PROD
 
 runs:
   using: "composite"
@@ -60,7 +56,7 @@ runs:
         dir_path: ${{ inputs.staging-dir }}\in
         output_path: ${{ inputs.staging-dir }}\out
         malware_block: "true"
-        environment_name: ${{ inputs.environment-name }}
+        environment_name: PROD
 
     - name: Copy signed binaries back to the bin directory
       shell: pwsh

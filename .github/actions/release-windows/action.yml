@@ -8,10 +8,6 @@ inputs:
     description: "Whether to run SSL.com signing on the inner binaries and the MSI"
     required: false
     default: "false"
-  environment-name:
-    description: "SSL.com environment (PROD or sandbox TEST)"
-    required: false
-    default: PROD
   ssl-username:
     description: "SSL.com eSigner username (secrets.SSL_USERNAME)"
     required: true
@@ -39,7 +35,6 @@ runs:
         ssl-credential-id: ${{ inputs.ssl-credential-id }}
         ssl-totp-secret: ${{ inputs.ssl-totp-secret }}
         staging-dir: ${{ runner.temp }}\sign-stage
-        environment-name: ${{ inputs.environment-name }}
 
     - name: Build MSI
       shell: pwsh
@@ -65,7 +60,7 @@ runs:
         file_path: ${{ steps.msi-path.outputs.path }}
         override: "true"
         malware_block: "true"
-        environment_name: ${{ inputs.environment-name }}
+        environment_name: PROD
 
     - name: Verify MSI is signed
       if: ${{ inputs.should-sign == 'true' }}
