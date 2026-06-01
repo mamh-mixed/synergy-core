@@ -48,41 +48,20 @@ set(GUI_QRC_FILE "${GUI_RES_DIR}/synergy.qrc")
 # target name == source basename.
 set(CMAKE_PROJECT_NAME synergy)
 
-# Synergy version mode suffix. Base version (MAJOR.MINOR.PATCH) is set in
-# the root CMakeLists.txt. Default mode is dev; flip with -DSYNERGY_VERSION_RELEASE=ON
-# or -DSYNERGY_VERSION_SNAPSHOT=ON for CI/release builds.
+# Synergy version. Base semver lives in ./VERSION (read by the root CMakeLists.txt);
+# composition rules — dev/snapshot/release suffix, rev count — are shared with
+# extra/cmake/SaveVersion.cmake via synergy_compute_version() so the CI-side
+# version (used in package filenames, S3 paths, etc.) matches what the binaries
+# report. Default mode is dev; flip with -DSYNERGY_VERSION_RELEASE=ON or
+# -DSYNERGY_VERSION_SNAPSHOT=ON for CI/release builds.
 option(SYNERGY_VERSION_RELEASE "Release version" OFF)
 option(SYNERGY_VERSION_SNAPSHOT "Snapshot version" OFF)
 
-# Compute revision count once. Used as both the +rN suffix in snapshot version
-# strings and as CMAKE_PROJECT_VERSION_TWEAK (consumed by VersionInfo.h.in's
-# kDisplayVersion ternary and src/apps/res/windows.rc.in's VER_VERSION 4th
-# digit, which Windows update mechanisms key off for installer recognition).
-set(_rev_count 0)
-if(GIT_FOUND)
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} describe HEAD --tags --long --match "v[0-9]*"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    OUTPUT_VARIABLE _git_describe
-    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if(_git_describe MATCHES "-([0-9]+)-g")
-    set(_rev_count "${CMAKE_MATCH_1}")
-  endif()
-endif()
-
-set(_base "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")
-if(SYNERGY_VERSION_RELEASE)
-  set(CMAKE_PROJECT_VERSION "${_base}")
-  set(CMAKE_PROJECT_VERSION_TWEAK 0)
-elseif(SYNERGY_VERSION_SNAPSHOT)
-  set(CMAKE_PROJECT_VERSION "${_base}-snapshot+r${_rev_count}")
-  set(CMAKE_PROJECT_VERSION_TWEAK ${_rev_count})
-else()
-  set(CMAKE_PROJECT_VERSION "${_base}-dev")
-  set(CMAKE_PROJECT_VERSION_TWEAK ${_rev_count})
+include(${CMAKE_CURRENT_LIST_DIR}/Version.cmake)
+synergy_compute_version("${CMAKE_SOURCE_DIR}" CMAKE_PROJECT_VERSION CMAKE_PROJECT_VERSION_TWEAK)
+set(CMAKE_PROJECT_VERSION_MAJOR ${SYNERGY_VERSION_MAJOR})
+set(CMAKE_PROJECT_VERSION_MINOR ${SYNERGY_VERSION_MINOR})
+set(CMAKE_PROJECT_VERSION_PATCH ${SYNERGY_VERSION_PATCH})
+if(NOT SYNERGY_VERSION_RELEASE AND NOT SYNERGY_VERSION_SNAPSHOT)
   add_compile_definitions(SYNERGY_VERSION_DEV)
 endif()
-unset(_base)
-unset(_git_describe)
-unset(_rev_count)

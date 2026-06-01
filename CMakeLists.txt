@@ -21,10 +21,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Project version. Synergy.cmake adds the dev/snapshot/release suffix later.
-set(DESKFLOW_VERSION_MAJOR 1)
-set(DESKFLOW_VERSION_MINOR 21)
-set(DESKFLOW_VERSION_PATCH 0)
+# Project version. SYNERGY_VERSION_* constants live in extra/cmake/Version.cmake
+# (single source of truth, also consumed by SaveVersion.cmake in CI); bridged to
+# the upstream-named DESKFLOW_VERSION_* here so project() can keep its existing
+# shape. Synergy.cmake adds the dev/snapshot/release suffix later.
+include(${CMAKE_CURRENT_SOURCE_DIR}/extra/cmake/Version.cmake)
+set(DESKFLOW_VERSION_MAJOR ${SYNERGY_VERSION_MAJOR})
+set(DESKFLOW_VERSION_MINOR ${SYNERGY_VERSION_MINOR})
+set(DESKFLOW_VERSION_PATCH ${SYNERGY_VERSION_PATCH})
 set(DESKFLOW_VERSION_TWEAK 0)
 
 # Git short SHA, consumed by VersionInfo.h.in (kVersionGitSha).

@@ -1,15 +1,26 @@
 name: "Get version"
-description: "Gets the version number from GitHub environment"
+description: >
+  Computes the build version via extra/cmake/SaveVersion.cmake — runs the same
+  synergy_compute_version() the build uses, so the CI-side version (used in
+  package filenames, S3 paths, release titles) matches what binaries report.
+
+outputs:
+  version:
+    description: "Synergy version (e.g. 1.21.0, 1.21.0-snapshot+r42, 1.21.0-dev)"
+    value: ${{ steps.compute.outputs.version }}
 
 runs:
   using: "composite"
-
   steps:
-    - run: |
-        echo "DESKFLOW_VERSION=$(git describe --long | sed 's/-/./g;s/v//g'  | grep -o '^[0-9]*.[0-9]*.[0-9]*.[0-9]*')">> $GITHUB_ENV
-        if [[ "$GITHUB_REF" == *"tags/v"* ]]; then
-          echo "DESKFLOW_PACKAGE_VERSION=$(echo $GITHUB_REF | sed 's,refs/tags/v,,g')">> $GITHUB_ENV
-        else
-          echo "DESKFLOW_PACKAGE_VERSION=continuous">> $GITHUB_ENV
-        fi
+    - id: compute
       shell: bash
+      run: |
+        mkdir -p build
+        cmake \
+          -DVERSION_FILE=build/VERSION \
+          -DSYNERGY_VERSION_RELEASE=${SYNERGY_VERSION_RELEASE:-false} \
+          -DSYNERGY_VERSION_SNAPSHOT=${SYNERGY_VERSION_SNAPSHOT:-false} \
+          -P extra/cmake/SaveVersion.cmake
+        version=$(cat build/VERSION)
+        echo "Computed version: $version"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
