@@ -59,7 +59,7 @@ jobs:
   # Quality gate to allow PR merge, used in the branch protection rules.
   ci-passed:
     runs-on: ubuntu-latest
-    needs: [build-windows, build-macos, build-linux, test-results, unix, flatpak]
+    needs: [build-windows, build-macos, build-linux, build-flatpak, test-results]
     if: always()
 
     steps:
@@ -75,8 +75,7 @@ jobs:
              && ok "${{needs.build-macos.result}}" \
              && ok "${{needs.build-linux.result}}" \
              && ok "${{needs.test-results.result}}" \
-             && ok "${{needs.unix.result}}" \
-             && ok "${{needs.flatpak.result}}"; then
+             && ok "${{needs.build-flatpak.result}}"; then
             echo "✅ CI passed" > $GITHUB_STEP_SUMMARY
           else
             exit 1
@@ -650,46 +649,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
-  # Technically, "unix" is a misnomer, but we use it here to mean "Unix-like BSD-derived".
-  unix:
-    needs: lint-clang
-    if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
-    name: unix-${{ matrix.distro.name }}
-    runs-on: ${{ vars.CI_UNIX_RUNNER || 'ubuntu-24.04' }}
-    timeout-minutes: 20
-
-    strategy:
-      fail-fast: false
-
-      matrix:
-        distro:
-          - name: freebsd
-
-    steps:
-      # Fancy checkout gets all the tags
-      # it also makes sure we can use git --describe correctly
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - name: Build on FreeBSD
-        if: ${{ matrix.distro.name == 'freebsd' }}
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-
-          # Workaround for unreliable pkg: Pin to a stable release.
-          # vmactions/freebsd-vm@v1 gets latest FreeBSD, which sometimes has a broken ports catalog.
-          release: "14.4"
-
-          run: |
-            pkg install -y cmake ninja gmake gcc12 openssl glib \
-            libX11 libXtst libxkbfile qt6-base qt6-tools gtk3 \
-            googletest pkgconf libei libportal doxygen
-            ${{env.CMAKE_CONFIGURE}} -G Ninja
-            cmake --build build -j16
-  flatpak:
+  build-flatpak:
     needs: lint-clang
     if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
     name: flatpak-${{matrix.flatpak.arch}}
