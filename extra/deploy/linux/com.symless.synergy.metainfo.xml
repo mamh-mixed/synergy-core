@@ -17,8 +17,7 @@
 	</description>
 	<launchable type="desktop-id">com.symless.synergy.desktop</launchable>
 	<url type="homepage">https://synergyapp.io</url>
-	<url type="bugtracker">https://symless.com/synergy/contact</url>
-	<url type="help">https://symless.com/synergy/help</url>
+	<url type="help">https://symless.com/synergy</url>
 	<!-- Screenshots: needs Synergy-branded artwork hosted at synergyapp.io.
 	     Left empty intentionally; flatpak-builder-lint exception covers this
 	     until the marketing site exposes screenshot URLs. -->
