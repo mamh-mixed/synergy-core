@@ -20,6 +20,16 @@ on:
         description: "Override AWS S3 target (e.g. s3://bucket/path)"
         required: false
         type: string
+      platform:
+        description: "Build only one platform (blank = all)"
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - windows
+          - macos
+          - linux
   push:
     branches: [beta]
   pull_request:
@@ -53,14 +63,20 @@ jobs:
     if: always()
 
     steps:
-      - name: Check all steps passed
+      # 'skipped' is treated as passing because the user/event deliberately
+      # filtered the platform set (workflow_dispatch with inputs.platform=windows
+      # skips macos+linux jobs). A failed job is still a failure.
+      - name: Check all jobs passed or were intentionally skipped
         run: |
-          if [[ ${{needs.build-windows.result}} == 'success' \
-             && ${{needs.build-macos.result}} == 'success' \
-             && ${{needs.build-linux.result}} == 'success' \
-             && ${{needs.test-results.result}} == 'success' \
-             && ${{needs.unix.result}} == 'success' \
-             && ${{needs.flatpak.result}} == 'success' ]]; then
+          ok() {
+            [[ "$1" == "success" || "$1" == "skipped" ]]
+          }
+          if ok "${{needs.build-windows.result}}" \
+             && ok "${{needs.build-macos.result}}" \
+             && ok "${{needs.build-linux.result}}" \
+             && ok "${{needs.test-results.result}}" \
+             && ok "${{needs.unix.result}}" \
+             && ok "${{needs.flatpak.result}}"; then
             echo "✅ CI passed" > $GITHUB_STEP_SUMMARY
           else
             exit 1
@@ -100,6 +116,7 @@ jobs:
 
   build-windows:
     needs: lint-clang
+    if: ${{ inputs.platform == '' || inputs.platform == 'windows' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
     timeout-minutes: 30
@@ -270,6 +287,7 @@ jobs:
 
   build-macos:
     needs: lint-clang
+    if: ${{ inputs.platform == '' || inputs.platform == 'macos' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
     timeout-minutes: ${{ matrix.target.timeout }}
@@ -445,6 +463,7 @@ jobs:
 
   build-linux:
     needs: lint-clang
+    if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
     container: ${{ matrix.target.container }}
@@ -634,6 +653,7 @@ jobs:
   # Technically, "unix" is a misnomer, but we use it here to mean "Unix-like BSD-derived".
   unix:
     needs: lint-clang
+    if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
     name: unix-${{ matrix.distro.name }}
     runs-on: ${{ vars.CI_UNIX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 20
@@ -671,6 +691,7 @@ jobs:
             cmake --build build -j16
   flatpak:
     needs: lint-clang
+    if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
     name: flatpak-${{matrix.flatpak.arch}}
     runs-on: ${{matrix.flatpak.runs-on}}
     timeout-minutes: 60
