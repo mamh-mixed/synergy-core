@@ -388,6 +388,13 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
 
   QStringList args = {coreMode};
 
+  // Pin the core to the same settings file the GUI is using. Without this the
+  // core falls through Settings::load()'s default lookup (user file before
+  // system file), so a user who has selected system scope in the GUI still
+  // gets a core running against the user-scope file. The daemon path already
+  // forwards the settings path via IPC below; this covers the foreground path.
+  args << QStringLiteral("--settings") << Settings::settingsFile();
+
   if (m_mode == Settings::CoreMode::Server) {
     const auto [hasNeededPermissions, configFilename] = persistServerConfig();
     if (configFilename.isEmpty()) {
