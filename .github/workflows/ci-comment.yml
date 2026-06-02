@@ -75,29 +75,30 @@ jobs:
           repo_url="${{ github.server_url }}/${{ github.repository }}"
           run_url="$repo_url/actions/runs/${{ github.event.workflow_run.id }}"
 
+          # Build the comment body in a file so newlines survive into marocchino's
+          # input. Inlining via the message: expression collapses multi-line values.
+          out="comment.md"
           {
-            echo "message<<EOF"
             echo "## CI Summary"
-
             for file in $files; do
               cat $file
             done
-
             echo
             echo "[Full summary]($run_url) (scroll down)"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          } > $out
+
+          echo "file=$out" >> $GITHUB_OUTPUT
 
       - name: Set PR comment
-        if: steps.get-pr-number.outputs.result && steps.summary.outputs.message
+        if: steps.get-pr-number.outputs.result && steps.summary.outputs.file
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           number: ${{ steps.get-pr-number.outputs.result }}
           header: ${{ github.event.workflow_run.name }}
-          message: ${{ steps.summary.outputs.message }}
+          path: ${{ steps.summary.outputs.file }}
 
       - name: Delete PR comment
-        if: ${{ steps.get-pr-number.outputs.result && !steps.summary.outputs.message }}
+        if: ${{ steps.get-pr-number.outputs.result && !steps.summary.outputs.file }}
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           number: ${{ steps.get-pr-number.outputs.result }}
