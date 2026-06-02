@@ -74,6 +74,9 @@ set(CMAKE_PROJECT_DOMAIN "deskflow.org")
 # by code that reads upstream-named on-disk artifacts (Qt .qm translation files).
 set(UPSTREAM_PROJECT_NAME ${CMAKE_PROJECT_NAME})
 
+# Identifier-safe form of the project version; downstream brands overwrite this.
+set(CMAKE_PROJECT_VERSION_BASE "${CMAKE_PROJECT_VERSION}")
+
 # Pull in Synergy branding overrides.
 include(${CMAKE_SOURCE_DIR}/extra/cmake/Synergy.cmake)
 

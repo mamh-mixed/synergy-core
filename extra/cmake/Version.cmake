@@ -20,7 +20,10 @@ set(SYNERGY_VERSION_PATCH 0)
 #   OUT_VERSION  the composed version string
 #   OUT_TWEAK    rev count (used by `windows.rc.in` as the 4th MSI digit so
 #                each snapshot/dev build is a distinguishable Windows installer)
-function(synergy_compute_version SOURCE_DIR OUT_VERSION OUT_TWEAK)
+#   OUT_BASE     plain base semver (X.Y.Z) for consumers that reject prerelease
+#                suffixes (Arch makepkg pkgver, anything treating the version as
+#                a strict identifier).
+function(synergy_compute_version SOURCE_DIR OUT_VERSION OUT_TWEAK OUT_BASE)
   set(_rev_count 0)
   find_package(Git QUIET)
   if(GIT_FOUND)
@@ -49,4 +52,5 @@ function(synergy_compute_version SOURCE_DIR OUT_VERSION OUT_TWEAK)
 
   set(${OUT_VERSION} "${_version}" PARENT_SCOPE)
   set(${OUT_TWEAK} "${_tweak}" PARENT_SCOPE)
+  set(${OUT_BASE} "${_base}" PARENT_SCOPE)
 endfunction()
