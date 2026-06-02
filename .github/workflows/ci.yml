@@ -242,8 +242,6 @@ jobs:
       - name: Tests
         uses: ./.github/actions/run-tests
         timeout-minutes: 2
-        with:
-          job: ${{ matrix.target.name }}
 
       - name: Test package
         uses: ./.github/actions/test-package
@@ -407,8 +405,6 @@ jobs:
       - name: Tests
         uses: ./.github/actions/run-tests
         timeout-minutes: 2
-        with:
-          job: ${{ matrix.target.name }}
 
       - name: Test package
         uses: ./.github/actions/test-package
@@ -576,8 +572,6 @@ jobs:
       - name: Tests
         uses: ./.github/actions/run-tests
         timeout-minutes: 2
-        with:
-          job: ${{ matrix.target.name }}
 
       - name: Test package
         uses: ./.github/actions/test-package

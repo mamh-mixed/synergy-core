@@ -70,6 +70,10 @@ set(CMAKE_PROJECT_CONTACT "${CMAKE_PROJECT_PROPER_NAME} <maintainers@deskflow.or
 set(CMAKE_PROJECT_REV_FQDN "org.deskflow.deskflow")
 set(CMAKE_PROJECT_DOMAIN "deskflow.org")
 
+# Captured before any downstream brand override of CMAKE_PROJECT_NAME, for use
+# by code that reads upstream-named on-disk artifacts (Qt .qm translation files).
+set(UPSTREAM_PROJECT_NAME ${CMAKE_PROJECT_NAME})
+
 # Pull in Synergy branding overrides.
 include(${CMAKE_SOURCE_DIR}/extra/cmake/Synergy.cmake)
 
