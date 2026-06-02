@@ -272,17 +272,6 @@ jobs:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
-      - name: Notify Slack on failure
-        if: ${{ failure() && github.event_name != 'pull_request' }}
-        uses: slackapi/slack-github-action@v1
-        with:
-          channel-id: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-          slack-message: |
-            <!channel>
-            ❌ Synergy CI failed for: *${{ matrix.target.name }}*
-            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Workflow run>
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
   build-macos:
     needs: lint-clang
@@ -448,17 +437,6 @@ jobs:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
-      - name: Notify Slack on failure
-        if: ${{ failure() && github.event_name != 'pull_request' }}
-        uses: slackapi/slack-github-action@v1
-        with:
-          channel-id: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-          slack-message: |
-            <!channel>
-            ❌ Synergy CI failed for: *${{ matrix.target.name }}*
-            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Workflow run>
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
   build-linux:
     needs: lint-clang
@@ -637,17 +615,6 @@ jobs:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
-      - name: Notify Slack on failure
-        if: ${{ failure() && github.event_name != 'pull_request' }}
-        uses: slackapi/slack-github-action@v1
-        with:
-          channel-id: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-          slack-message: |
-            <!channel>
-            ❌ Synergy CI failed for: *${{ matrix.target.name }}*
-            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Workflow run>
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
   build-flatpak:
     needs: lint-clang
@@ -757,14 +724,37 @@ jobs:
           echo "Uploading to AWS S3: $url"
           aws s3 cp ./dist/ "$url" --recursive
 
-      - name: Notify Slack on failure
-        if: failure()
-        uses: slackapi/slack-github-action@v1
+  report:
+    needs: [build-windows, build-macos, build-linux, build-flatpak, test-results, s3-upload]
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Build Slack message
+        id: message
+        shell: bash
+        run: |
+          link="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "text<<EOF"
+            echo "<!channel>"
+            echo "❌ Synergy CI failed"
+            [ "${{ needs.build-windows.result }}" = "failure" ] && echo "• Windows build failed"
+            [ "${{ needs.build-macos.result }}" = "failure" ] && echo "• macOS build failed"
+            [ "${{ needs.build-linux.result }}" = "failure" ] && echo "• Linux build failed"
+            [ "${{ needs.build-flatpak.result }}" = "failure" ] && echo "• Flatpak build failed"
+            [ "${{ needs.test-results.result }}" = "failure" ] && echo "• Test summary failed"
+            [ "${{ needs.s3-upload.result }}" = "failure" ] && echo "• S3 upload failed"
+            echo "<$link|View workflow>"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v3
         with:
-          channel-id: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-          slack-message: |
-            <!channel>
-            ❌ Synergy S3 upload failed
-            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Workflow run>
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
+            text: ${{ toJSON(steps.message.outputs.text) }}
