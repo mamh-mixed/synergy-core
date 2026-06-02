@@ -18,6 +18,6 @@ if(NOT VERSION_FILE)
 endif()
 
 get_filename_component(_repo_root "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
-synergy_compute_version("${_repo_root}" _version _tweak)
+synergy_compute_version("${_repo_root}" _version _tweak _base)
 message(STATUS "Computed version: ${_version}")
 file(WRITE "${VERSION_FILE}" "${_version}")
