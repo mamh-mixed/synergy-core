@@ -1027,6 +1027,24 @@ void CALLBACK MSWindowsDesks::foregroundHookCallback(
                     static_cast<WPARAM>(pt.x), static_cast<LPARAM>(pt.y));
 }
 
+// Pin the calling thread to Per-Monitor-V2 DPI awareness. Touch parsing and
+// injection (parseHidTouch / deskMouseMove / InjectTouchInput) must use
+// consistent *physical*-pixel metrics; if the coordinate is computed in one DPI
+// context and the absolute-move is normalized in another, the injected click
+// lands offset by the scale factor (worse the further from the origin) — which
+// only bites DPI-unaware target apps, since aware apps share our coord space.
+// V2 is overridable per-thread regardless of the process manifest, and falls
+// back to a no-op on pre-1607 Windows. (HANDLE/-4 avoids an SDK header dep.)
+static void pinThreadDpiPerMonitorV2()
+{
+  typedef HANDLE(WINAPI * SetThreadDpiAwarenessContextFn)(HANDLE);
+  if (auto fn = reinterpret_cast<SetThreadDpiAwarenessContextFn>(GetProcAddress(
+          GetModuleHandleW(L"user32.dll"), "SetThreadDpiAwarenessContext"))) {
+    // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 == (HANDLE)-4
+    fn(reinterpret_cast<HANDLE>(static_cast<INT_PTR>(-4)));
+  }
+}
+
 void MSWindowsDesks::deskThread(void *vdesk)
 {
   MSG msg;
@@ -1036,6 +1054,10 @@ void MSWindowsDesks::deskThread(void *vdesk)
   desk->m_threadID = GetCurrentThreadId();
   desk->m_window = NULL;
   desk->m_foregroundWindow = NULL;
+
+  // consistent physical-pixel coords for touch injection (must precede window
+  // creation so the desk window inherits the same awareness)
+  pinThreadDpiPerMonitorV2();
   if (desk->m_desk != NULL && SetThreadDesktop(desk->m_desk) != 0) {
     // create a message queue
     PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE);
