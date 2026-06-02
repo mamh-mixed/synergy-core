@@ -19,7 +19,7 @@
 
 #include <QString>
 
-#include <bits/chrono.h>
+#include <chrono> // IWYU pragma: keep -- clangd wrongly thinks this is unused
 
 namespace synergy::gui {
 
