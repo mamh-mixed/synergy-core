@@ -680,16 +680,16 @@ jobs:
         uses: ./.github/actions/get-version
 
       - name: Lint appsteam
-        run: flatpak-builder-lint appstream deploy/linux/org.deskflow.deskflow.metainfo.xml
+        run: flatpak-builder-lint appstream extra/deploy/linux/com.symless.synergy.metainfo.xml
 
       - name: Lint manifest
-        run: flatpak-builder-lint manifest deploy/linux/flatpak/org.deskflow.deskflow.yml
+        run: flatpak-builder-lint manifest extra/deploy/linux/flatpak/com.symless.synergy.yml
 
       - name: Build
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: ${{ env.PACKAGE_PREFIX }}-${{ steps.get-version.outputs.version }}-linux-${{ matrix.flatpak.arch }}.flatpak
-          manifest-path: deploy/linux/flatpak/org.deskflow.deskflow.yml
+          manifest-path: extra/deploy/linux/flatpak/com.symless.synergy.yml
           cache-key: flatpak-builder-${{matrix.flatpak.arch}}-2.0
           arch: ${{matrix.flatpak.arch}}
           upload-artifact: false
