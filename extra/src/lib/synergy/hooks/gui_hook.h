@@ -22,6 +22,7 @@
 #include "synergy/gui/FeatureHandler.h"
 #include "synergy/gui/SettingsMigration.h"
 #include "synergy/gui/SettingsScope.h"
+#include "synergy/gui/UpdateChannel.h"
 #include "synergy/gui/dev_mode.h"
 #include "synergy/gui/license/LicenseHandler.h"
 
@@ -77,7 +78,8 @@ inline void onSettings(QDialog *parent)
 
 inline void onVersionCheck(QString &versionUrl)
 {
-  return LicenseHandler::instance().handleVersionCheck(versionUrl);
+  LicenseHandler::instance().handleVersionCheck(versionUrl);
+  synergy::gui::UpdateChannel::applyToVersionCheckUrl(versionUrl);
 }
 
 inline bool onCoreStart()
