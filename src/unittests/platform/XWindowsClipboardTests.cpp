@@ -33,6 +33,8 @@ void XWindowsClipboardTests::defaultCtor()
 void XWindowsClipboardTests::initTestCase()
 {
   m_display = XOpenDisplay(nullptr);
+  if (!m_display)
+    QSKIP("no X display available (e.g. headless CI); X11 clipboard tests need a running X server");
   int screen = DefaultScreen(m_display);
   Window root = XRootWindow(m_display, screen);
 
@@ -46,6 +48,8 @@ void XWindowsClipboardTests::initTestCase()
 
 void XWindowsClipboardTests::cleanupTestCase()
 {
+  if (!m_display)
+    return;
   XDestroyWindow(m_display, m_window);
   XCloseDisplay(m_display);
 }
