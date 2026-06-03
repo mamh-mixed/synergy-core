@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: (C) 2009 - 2012 Nick Bolton
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 
 # Link items by fill path
 cmake_policy(SET CMP0003 NEW)
@@ -90,9 +90,9 @@ message(STATUS "Building ${CMAKE_PROJECT_NAME}-${CMAKE_PROJECT_VERSION}")
 
 # Set lib versions
 set(REQUIRED_OPENSSL_VERSION 3.0)
-set(REQUIRED_LIBEI_VERSION 1.3)
-set(REQUIRED_LIBPORTAL_VERSION 0.9.1)
-set(REQUIRED_QT_VERSION 6.7.0)
+set(REQUIRED_LIBEI_VERSION 1.0)
+set(REQUIRED_LIBPORTAL_VERSION 0.8.0)
+set(REQUIRED_QT_VERSION 6.2.0)
 
 if (WIN32)
   # VSCMD_ARG_TGT_ARCH is set on CI
@@ -146,6 +146,7 @@ add_definitions(-DQT_NO_KEYWORDS)
 #Options for Linux platform support
 if(UNIX AND NOT APPLE)
   option(BUILD_X11_SUPPORT "Build with x11 support" ON)
+  option(BUILD_WAYLAND_SUPPORT "Build with Wayland (libei/libportal) support" ON)
 elseif (APPLE)
   option(BUILD_OSX_BUNDLE "Build mac os bundle" ON)
 endif()

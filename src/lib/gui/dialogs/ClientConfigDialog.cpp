@@ -52,13 +52,16 @@ void ClientConfigDialog::initConnections() const
       &ClientConfigDialog::resetToDefault
   );
 
-  connect(
-      ui->cbDynamicConnectTime, &QCheckBox::checkStateChanged, this, &ClientConfigDialog::setButtonBoxEnabledButtons
-  );
-  connect(ui->cbLanguageSync, &QCheckBox::checkStateChanged, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
-  connect(ui->cbYScrollInvert, &QCheckBox::checkStateChanged, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  const auto checkboxSignal = &QCheckBox::checkStateChanged;
+#else
+  const auto checkboxSignal = &QCheckBox::stateChanged;
+#endif
+  connect(ui->cbDynamicConnectTime, checkboxSignal, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
+  connect(ui->cbLanguageSync, checkboxSignal, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
+  connect(ui->cbYScrollInvert, checkboxSignal, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
   connect(ui->sbYScrollScale, &QDoubleSpinBox::valueChanged, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
-  connect(ui->cbXScrollInvert, &QCheckBox::checkStateChanged, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
+  connect(ui->cbXScrollInvert, checkboxSignal, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
   connect(ui->sbXScrollScale, &QDoubleSpinBox::valueChanged, this, &ClientConfigDialog::setButtonBoxEnabledButtons);
 }
 

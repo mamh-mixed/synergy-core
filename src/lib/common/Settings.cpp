@@ -81,9 +81,15 @@ Settings::Settings(QObject *parent) : QObject(parent)
   qInfo().noquote() << "initial settings file:" << m_settings->fileName();
 
   const auto xdgStateHome = qEnvironmentVariable("XDG_STATE_HOME");
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
   const auto stateBase = !xdgStateHome.isEmpty()
                              ? xdgStateHome
                              : QStandardPaths::standardLocations(QStandardPaths::GenericStateLocation).at(0);
+#else
+  const auto stateBase = !xdgStateHome.isEmpty()
+                             ? xdgStateHome
+                             : QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+#endif
   const auto stateFile = QStringLiteral("%1/%2.state").arg(stateBase, kAppName);
 
   m_stateSettings = new QSettings(stateFile, QSettings::IniFormat, this);

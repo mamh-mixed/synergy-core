@@ -197,7 +197,7 @@ void StatusBar::updateTimerLabel()
 
 void StatusBar::setSecurityIcon(bool encrypted)
 {
-  const auto icon = QIcon::fromTheme(encrypted ? QIcon::ThemeIcon::SecurityHigh : QIcon::ThemeIcon::SecurityLow);
+  const auto icon = QIcon::fromTheme(encrypted ? QStringLiteral("security-high") : QStringLiteral("security-low"));
   m_lblSecurityIcon->setPixmap(icon.pixmap(QSize(32, 32)));
   m_encrypted = encrypted;
   setSecurityLevel(m_securityLevel);

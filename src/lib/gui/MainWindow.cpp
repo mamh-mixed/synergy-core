@@ -93,7 +93,7 @@ MainWindow::MainWindow()
 
   // Setup Actions
   m_actionAbout->setMenuRole(QAction::AboutRole);
-  m_actionAbout->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::HelpAbout));
+  m_actionAbout->setIcon(QIcon::fromTheme(QStringLiteral("help-about")));
 
   m_actionMinimize->setIcon(QIcon::fromTheme(QStringLiteral("window-minimize-pip")));
   m_actionRestore->setIcon(QIcon::fromTheme(QStringLiteral("window-restore-pip")));
@@ -122,7 +122,7 @@ MainWindow::MainWindow()
   m_actionRestartCore->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
   m_actionRestartCore->setMenuRole(QAction::NoRole);
 
-  m_actionStopCore->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ProcessStop));
+  m_actionStopCore->setIcon(QIcon::fromTheme(QStringLiteral("process-stop")));
   m_actionStopCore->setMenuRole(QAction::NoRole);
 
   m_actionReportBug->setIcon(QIcon::fromTheme(QStringLiteral("tools-report-bug")));
@@ -575,7 +575,7 @@ void MainWindow::updateModeControlLabels()
     startText = tr("Start");
     stopText = tr("Stop");
     startIcon = QIcon::fromTheme(QStringLiteral("system-run"));
-    stopIcon = QIcon::fromTheme(QIcon::ThemeIcon::ProcessStop);
+    stopIcon = QIcon::fromTheme(QStringLiteral("process-stop"));
   } else {
     startText = tr("Connect");
     stopText = tr("Disconnect");
