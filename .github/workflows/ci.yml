@@ -355,10 +355,15 @@ jobs:
         shell: bash
         run: |
           for i in $(seq 1 5); do
-            cmake --build build --config Release -j8 --target package 2>&1 && { echo "Package successful"; break; }
+            if cmake --build build --config Release -j8 --target package 2>&1; then
+              echo "Package successful"
+              exit 0
+            fi
             echo "Package attempt $i failed"
             sleep 1
           done
+          echo "ERROR: package failed after 5 attempts" >&2
+          exit 1
 
       # Sign the DMG itself so Gatekeeper trusts it before extraction. Then
       # submit to notarytool (synchronous via --wait) and staple the returned
