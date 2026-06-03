@@ -638,7 +638,7 @@ jobs:
           upload-artifact: false
 
       - name: Validate build
-        run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
+        run: flatpak-builder-lint --exceptions --user-exceptions extra/deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
 
       - name: Upload
         uses: actions/upload-artifact@v7

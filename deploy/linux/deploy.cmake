@@ -12,11 +12,16 @@ install(
 )
 
 # Install our icon
-install(FILES ${MY_DIR}/org.deskflow.deskflow.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/)
+install(
+  FILES ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.png
+  RENAME ${CMAKE_PROJECT_REV_FQDN}.png
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/
+)
 
 # Install our symbolic icon
 install(
-  FILES ${CMAKE_SOURCE_DIR}/src/apps/res/icons/deskflow-light/apps/64/org.deskflow.deskflow-symbolic.svg
+  FILES ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.svg
+  RENAME ${CMAKE_PROJECT_REV_FQDN}-symbolic.svg
   DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/symbolic/apps/
 )
 
