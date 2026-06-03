@@ -31,6 +31,11 @@ if(SYNERGY_CORE_FLAVOR)
   set(BUILD_GUI OFF CACHE BOOL "Build GUI")
   set(BUILD_TESTS OFF CACHE BOOL "Build tests")
   set(BUILD_INSTALLER OFF CACHE BOOL "Build installer")
+  # On macOS the core normally nests into the GUI .app bundle
+  # ($<TARGET_BUNDLE_CONTENT_DIR:Synergy>), but with BUILD_GUI=OFF that target
+  # doesn't exist and cmake generation fails. Headless builds ship the core
+  # binary directly, so disable the bundle too.
+  set(BUILD_OSX_BUNDLE OFF CACHE BOOL "Build mac os bundle")
 endif()
 
 # Don't run unit tests as part of the build. Devs can opt back in with
