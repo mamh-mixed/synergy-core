@@ -86,9 +86,8 @@ Settings::Settings(QObject *parent) : QObject(parent)
                              ? xdgStateHome
                              : QStandardPaths::standardLocations(QStandardPaths::GenericStateLocation).at(0);
 #else
-  const auto stateBase = !xdgStateHome.isEmpty()
-                             ? xdgStateHome
-                             : QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+  const auto stateBase =
+      !xdgStateHome.isEmpty() ? xdgStateHome : QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
 #endif
   const auto stateFile = QStringLiteral("%1/%2.state").arg(stateBase, kAppName);
 
