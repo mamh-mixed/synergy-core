@@ -512,18 +512,6 @@ jobs:
             like: "arch"
             config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DEV_DOCS=ON"
 
-          - name: "ubuntu-22.04-x86_64"
-            runs-on: ubuntu-latest
-            container: ubuntu:22.04
-            like: "debian"
-            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_WAYLAND_SUPPORT=OFF"
-
-          - name: "ubuntu-22.04-arm64"
-            runs-on: ubuntu-24.04-arm
-            container: ubuntu:22.04
-            like: "debian"
-            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_WAYLAND_SUPPORT=OFF"
-
           - name: "ubuntu-24.04-x86_64"
             runs-on: ubuntu-latest
             container: ubuntu:24.04

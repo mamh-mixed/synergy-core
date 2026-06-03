@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: (C) 2009 - 2012 Nick Bolton
 # SPDX-License-Identifier: MIT
 
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.24)
 
 # Link items by fill path
 cmake_policy(SET CMP0003 NEW)
@@ -92,7 +92,7 @@ message(STATUS "Building ${CMAKE_PROJECT_NAME}-${CMAKE_PROJECT_VERSION}")
 set(REQUIRED_OPENSSL_VERSION 3.0)
 set(REQUIRED_LIBEI_VERSION 1.0)
 set(REQUIRED_LIBPORTAL_VERSION 0.8.0)
-set(REQUIRED_QT_VERSION 6.2.0)
+set(REQUIRED_QT_VERSION 6.4.0)
 
 if (WIN32)
   # VSCMD_ARG_TGT_ARCH is set on CI
