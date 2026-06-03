@@ -208,7 +208,7 @@ QVariant Settings::defaultValue(const QString &key)
     return 1.0;
 
   if (key == Server::Protocol)
-    return QVariant::fromValue(NetworkProtocol::Barrier);
+    return QVariant::fromValue(NetworkProtocol::Synergy);
 
   return QVariant();
 }
