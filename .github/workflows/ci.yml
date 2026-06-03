@@ -516,13 +516,13 @@ jobs:
             runs-on: ubuntu-latest
             container: ubuntu:24.04
             like: "debian"
-            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_WAYLAND_SUPPORT=OFF"
+            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
 
           - name: "ubuntu-24.04-arm64"
             runs-on: ubuntu-24.04-arm
             container: ubuntu:24.04
             like: "debian"
-            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_WAYLAND_SUPPORT=OFF"
+            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
 
           - name: "ubuntu-26.04-x86_64"
             runs-on: ubuntu-latest
@@ -564,6 +564,25 @@ jobs:
         uses: ./.github/actions/install-dependencies
         with:
           like: ${{ matrix.target.like }}
+
+      # 24.04's system libportal (0.7.x) lacks the input-capture portal the code needs
+      # (>= 0.8.0), and that LTS's libs are frozen. Build a newer libportal and static-link
+      # it so the shipped binary carries no runtime dependency on a >= 0.8 system libportal
+      # (libei from the system is fine). The code uses no xdp_parent, so no GUI backend is
+      # needed, and removing the system .so makes `-lportal` resolve to the static archive.
+      - name: Build newer libportal (Ubuntu 24.04)
+        if: startsWith(matrix.target.name, 'ubuntu-24.04')
+        shell: bash
+        run: |
+          apt-get install -y -qq meson pkg-config
+          git clone --depth 1 --branch 0.9.1 https://github.com/flatpak/libportal.git /tmp/libportal
+          meson setup /tmp/libportal/_build /tmp/libportal --prefix=/usr --libdir=lib/$(gcc -dumpmachine) \
+            --default-library=static \
+            -Dbackend-gtk3=disabled -Dbackend-gtk4=disabled -Dbackend-qt5=disabled -Dbackend-qt6=disabled \
+            -Ddocs=false -Dintrospection=false -Dvapi=false -Dtests=false
+          meson install -C /tmp/libportal/_build
+          rm -f /usr/lib/$(gcc -dumpmachine)/libportal.so*
+          ldconfig
 
       - name: Get version
         id: get-version

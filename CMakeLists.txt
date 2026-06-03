@@ -91,7 +91,7 @@ message(STATUS "Building ${CMAKE_PROJECT_NAME}-${CMAKE_PROJECT_VERSION}")
 # Set lib versions
 set(REQUIRED_OPENSSL_VERSION 3.0)
 set(REQUIRED_LIBEI_VERSION 1.0)
-set(REQUIRED_LIBPORTAL_VERSION 0.7.0)
+set(REQUIRED_LIBPORTAL_VERSION 0.8.0)
 set(REQUIRED_QT_VERSION 6.4.0)
 
 if (WIN32)
@@ -146,7 +146,6 @@ add_definitions(-DQT_NO_KEYWORDS)
 #Options for Linux platform support
 if(UNIX AND NOT APPLE)
   option(BUILD_X11_SUPPORT "Build with x11 support" ON)
-  option(BUILD_WAYLAND_SUPPORT "Build with Wayland (libei/libportal) support" ON)
 elseif (APPLE)
   option(BUILD_OSX_BUNDLE "Build mac os bundle" ON)
 endif()
