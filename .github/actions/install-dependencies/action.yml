@@ -34,9 +34,12 @@ runs:
           elif [ "$RUNNER_OS" == "Linux" ]; then
             if [ ${{inputs.like}} == "debian" ]; then
               apt update -qqq > /dev/null
+              # qt6-l10n-tools + qt6-tools-dev-tools provide lconvert/lupdate/lrelease, which
+              # qt6-tools-dev's LinguistTools cmake references but doesn't pull in on 22.04.
               apt install -qqq cmake build-essential ninja-build \
                 xorg-dev libx11-dev libxtst-dev libssl-dev \
                 libglib2.0-dev libxkbfile-dev qt6-base-dev qt6-tools-dev \
+                qt6-l10n-tools qt6-tools-dev-tools \
                 libgtk-3-dev libgtest-dev libgmock-dev \
                 help2man doxygen -y >/dev/null
                 
