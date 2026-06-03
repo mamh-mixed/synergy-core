@@ -40,6 +40,7 @@ StatusBar::StatusBar(QWidget *parent)
   m_lblStatus->setText(tr("%1 is not running").arg(kAppName));
   insertPermanentWidget(2, m_lblStatus, 1);
 
+  m_btnUpdate->setObjectName(QStringLiteral("btnUpdate"));
   m_btnUpdate->setVisible(false);
   m_btnUpdate->setFlat(true);
   m_btnUpdate->setLayoutDirection(Qt::RightToLeft);

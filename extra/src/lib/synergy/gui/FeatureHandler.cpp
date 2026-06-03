@@ -24,6 +24,7 @@
 #include "synergy/gui/TestSettings.h"
 #include "synergy/gui/UpdateChannel.h"
 #include "synergy/gui/constants.h"
+#include "synergy/gui/styles.h"
 
 #include <QAction>
 #include <QApplication>
@@ -52,6 +53,19 @@ using namespace synergy::gui;
 void FeatureHandler::handleMainWindow(QMainWindow *mainWindow)
 {
   m_pMainWindow = mainWindow;
+  styleUpdateNotice(mainWindow);
+}
+
+void FeatureHandler::styleUpdateNotice(QMainWindow *mainWindow) const
+{
+  // Reuse the license-expiry notice pill (kStyleNoticeLabel) so the upstream
+  // "update available" status-bar button reads identically to it.
+  auto *button = mainWindow->findChild<QPushButton *>(QStringLiteral("btnUpdate"));
+  if (button == nullptr) {
+    qWarning("update notice: no btnUpdate in status bar, skipping styling");
+    return;
+  }
+  button->setStyleSheet(kStyleNoticeLabel);
 }
 
 void FeatureHandler::handleAppStart()

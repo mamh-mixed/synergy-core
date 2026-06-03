@@ -35,6 +35,7 @@ public:
 
 private:
   void addTestMenu();
+  void styleUpdateNotice(QMainWindow *mainWindow) const;
   void addScopeTab(QDialog *parent) const;
   void addUpdateChannelOption(QDialog *parent) const;
 
