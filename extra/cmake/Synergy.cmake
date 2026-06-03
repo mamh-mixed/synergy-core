@@ -24,6 +24,16 @@ else()
 endif()
 add_compile_definitions(SYNERGY_DISPLAY_NAME="${SYNERGY_DISPLAY_NAME}")
 
+# Single source of truth for the minimum macOS version. Synergy is long-term
+# stable (unlike upstream, which tracks recent macOS), so we target the oldest
+# macOS the linked Qt 6.x supports, the same value for every architecture.
+# Both the build (here) and the packaged app's advertised minimum
+# (apps/gui-electron/dist/package.config.js, which reads this line) derive from
+# this one value, so they can't drift. CI must NOT pass -DCMAKE_OSX_DEPLOYMENT_TARGET.
+if(APPLE)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12")
+endif()
+
 # Core flavor seeds headless-build defaults (no GUI, no tests, no installer).
 # No `FORCE` on the cache writes: the seed only fills empty slots, so a user
 # passing -DBUILD_GUI=ON alongside the flavor flag still wins.

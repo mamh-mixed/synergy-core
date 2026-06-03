@@ -267,13 +267,15 @@ jobs:
             runs-on: macos-15
             timeout: 10
             qt-version: 6.11.1
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=14'
+            # Deployment target is set once in extra/cmake/Synergy.cmake (single
+            # source of truth); don't pass -DCMAKE_OSX_DEPLOYMENT_TARGET here.
+            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64"'
 
           - name: "macos-x64"
             runs-on: macos-15-intel
             timeout: 20
             qt-version: 6.9.3
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=12 -DCMAKE_OSX_SYSROOT=/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk'
+            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_OSX_SYSROOT=/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk'
 
     steps:
       - name: Checkout
