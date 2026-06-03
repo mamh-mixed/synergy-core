@@ -6,11 +6,13 @@
 
 #include "base/Log.h"
 
+// Qt headers that pull in qtextstream.h must precede X11 headers (XWindowsClipboard.h
+// → Xlib.h) because X11 '#define Status int' breaks qtextstream.h's 'enum Status'.
+#include <QTest>
+
 #if !WINAPI_LIBEI && !WINAPI_PORTAL
 #include "platform/XWindowsClipboard.h"
 #endif
-
-#include <QTest>
 
 class XWindowsClipboardTests : public QObject
 {
