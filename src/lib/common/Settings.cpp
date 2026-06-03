@@ -100,10 +100,12 @@ Settings::Settings(QObject *parent) : QObject(parent)
 void Settings::upgradeSettings()
 {
   const auto logValue = m_settings->value(Settings::Log::Level).toString();
-  if (!LogLevel::logLevelOptions().contains(logValue, Qt::CaseInsensitive))
+  if (LogLevel::indexOfOption(logValue) < 0)
     m_settings->setValue(Settings::Log::Level, defaultValue(Settings::Log::Level));
 
-  for (const auto [oldKey, newKey] : m_upgradedMap.asKeyValueRange()) {
+  for (auto it = m_upgradedMap.cbegin(); it != m_upgradedMap.cend(); ++it) {
+    const auto &oldKey = it.key();
+    const auto &newKey = it.value();
     if (m_settings->contains(oldKey) && !m_settings->contains(newKey)) {
       m_settings->setValue(newKey, m_settings->value(oldKey));
     }
@@ -154,9 +156,9 @@ QString Settings::cleanComputerName(const QString &name)
   cleanName.replace(space, underscore);
   cleanName.replace(nameRegex, {});
   while (cleanName.startsWith(hyphen) || cleanName.startsWith(underscore) || cleanName.startsWith(period))
-    cleanName.removeFirst();
+    cleanName.remove(0, 1);
   while (cleanName.endsWith(hyphen) || cleanName.endsWith(underscore) || cleanName.endsWith(period))
-    cleanName.removeLast();
+    cleanName.chop(1);
   if (cleanName.length() > 255) {
     cleanName.truncate(255);
     cleanName = cleanComputerName(cleanName);
