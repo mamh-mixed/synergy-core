@@ -6,8 +6,10 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
+      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/synergy",
       "preLaunchTask": "build-silent",
+      "initCommands": ["settings set target.preload-symbols false"],
       "osx": {
         "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy"
       }
@@ -17,6 +19,7 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
+      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/unittests",
       "args": ["${input:gtest-args}"],
       "preLaunchTask": "build-silent"
@@ -26,15 +29,43 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
+      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/integtests",
       "args": ["${input:gtest-args}"],
       "preLaunchTask": "build-silent"
+    },
+    {
+      "name": "unix - server",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "runInTerminal": true,
+      "program": "${workspaceFolder}/build/bin/synergy-core",
+      "args": ["server"],
+      "preLaunchTask": "build-silent",
+      "osx": {
+        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy-core"
+      }
+    },
+    {
+      "name": "unix - client",
+      "type": "lldb-dap",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "runInTerminal": true,
+      "program": "${workspaceFolder}/build/bin/synergy-core",
+      "args": ["client"],
+      "preLaunchTask": "build-silent",
+      "osx": {
+        "program": "${workspaceFolder}/build/bin/synergy.app/Contents/MacOS/synergy-core"
+      }
     },
     {
       "name": "unix - daemon",
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
+      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/synergy-daemon",
       "args": ["-f"],
       "preLaunchTask": "build-silent"
@@ -55,15 +86,6 @@
       "preLaunchTask": "build-kill-gui"
     },
     {
-      "name": "windows - version",
-      "type": "cppvsdbg",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin-copy/synergy-core",
-      "args": ["--version"],
-      "internalConsoleOptions": "openOnSessionStart"
-    },
-    {
       "name": "windows - unittests",
       "type": "cppvsdbg",
       "cwd": "${workspaceRoot}",
@@ -82,6 +104,26 @@
       "internalConsoleOptions": "openOnSessionStart"
     },
     {
+      "name": "windows - server",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-core",
+      "args": ["server"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-core"
+    },
+    {
+      "name": "windows - client",
+      "type": "cppvsdbg",
+      "cwd": "${workspaceRoot}",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/bin-copy/synergy-core",
+      "args": ["client"],
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "build-kill-core"
+    },
+    {
       "name": "windows - active-desktop",
       "type": "cppvsdbg",
       "cwd": "${workspaceRoot}",
@@ -92,7 +134,7 @@
       "preLaunchTask": "build-kill-core"
     },
     {
-      "name": "windows - daemon foreground",
+      "name": "windows - daemon",
       "type": "cppvsdbg",
       "cwd": "${workspaceRoot}",
       "request": "launch",
@@ -100,26 +142,6 @@
       "args": ["-f"],
       "internalConsoleOptions": "openOnSessionStart",
       "preLaunchTask": "build-kill-core"
-    },
-    {
-      "name": "windows - daemon install",
-      "type": "cppvsdbg",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin-copy/synergy-daemon",
-      "args": ["--install"],
-      "internalConsoleOptions": "openOnSessionStart",
-      "preLaunchTask": "build"
-    },
-    {
-      "name": "windows - daemon uninstall",
-      "type": "cppvsdbg",
-      "cwd": "${workspaceRoot}",
-      "request": "launch",
-      "program": "${workspaceFolder}/build/bin-copy/synergy-daemon",
-      "args": ["--uninstall"],
-      "internalConsoleOptions": "openOnSessionStart",
-      "preLaunchTask": "build"
     },
     {
       "name": "windows - attach",
