@@ -20,7 +20,7 @@ install(
 
 # Install our symbolic icon
 install(
-  FILES ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.svg
+  FILES ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy-symbolic-light.svg
   RENAME ${CMAKE_PROJECT_REV_FQDN}-symbolic.svg
   DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/symbolic/apps/
 )

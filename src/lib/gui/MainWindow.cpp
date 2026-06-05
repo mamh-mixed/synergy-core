@@ -776,7 +776,12 @@ void MainWindow::setTrayIcon()
     return;
   }
 
-  auto icon = QIcon::fromTheme(themeIcon, QIcon(fallbackPath.arg(kAppId, iconMode(), themeIcon)));
+  auto icon =
+#ifdef SYNERGY_EXTRA_HEADER
+      synergy::hooks::trayIcon(fallbackPath.arg(kAppId, iconMode(), themeIcon));
+#else
+      QIcon::fromTheme(themeIcon, QIcon(fallbackPath.arg(kAppId, iconMode(), themeIcon)));
+#endif
   icon.setIsMask(true);
   m_trayIcon->setIcon(icon);
 }
