@@ -61,7 +61,8 @@ inline void onMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *co
 
 inline void onTitleApplied(QMainWindow *mainWindow)
 {
-  mainWindow->setWindowTitle(synergy::gui::titleWithDevSuffix(synergy::kDisplayName));
+  const bool showVersion = Settings::value(Settings::Gui::ShowVersionInTitle).toBool();
+  mainWindow->setWindowTitle(synergy::gui::windowTitle(synergy::kDisplayName, showVersion));
 }
 
 inline bool onAppStart()

@@ -351,7 +351,8 @@ void LicenseHandler::updateWindowTitle() const
 {
   const auto productName = QString::fromStdString(m_license.productName());
   qDebug("updating main window title: %s", qPrintable(productName));
-  m_pMainWindow->setWindowTitle(synergy::gui::titleWithDevSuffix(productName));
+  const bool showVersion = Settings::value(Settings::Gui::ShowVersionInTitle).toBool();
+  m_pMainWindow->setWindowTitle(synergy::gui::windowTitle(productName, showVersion));
 }
 
 const synergy::license::License &LicenseHandler::license() const
