@@ -7,14 +7,15 @@
 set(SYNERGY_VERSION_MAJOR 1)
 set(SYNERGY_VERSION_MINOR 21)
 set(SYNERGY_VERSION_PATCH 0)
+set(SYNERGY_VERSION_STAGE "beta")
 
 # Composes the full version string by applying SYNERGY_VERSION_RELEASE /
 # SYNERGY_VERSION_SNAPSHOT semantics on top of the SYNERGY_VERSION_MAJOR/MINOR/PATCH
 # constants above, plus a git-derived revision count for snapshot/dev builds:
 #
-#   RELEASE       → "X.Y.Z"
-#   SNAPSHOT      → "X.Y.Z-snapshot+rN"  (N = commits since last v* tag)
-#   neither (dev) → "X.Y.Z-dev"
+#   RELEASE       → "X.Y.Z[-STAGE]"             (STAGE = SYNERGY_VERSION_STAGE, e.g. beta1)
+#   SNAPSHOT      → "X.Y.Z[-STAGE]-snapshot+rN"  (N = commits since last v* tag)
+#   neither (dev) → "X.Y.Z[-STAGE]-dev"
 #
 # Outputs (PARENT_SCOPE):
 #   OUT_VERSION  the composed version string
@@ -39,14 +40,18 @@ function(synergy_compute_version SOURCE_DIR OUT_VERSION OUT_TWEAK OUT_BASE)
   endif()
 
   set(_base "${SYNERGY_VERSION_MAJOR}.${SYNERGY_VERSION_MINOR}.${SYNERGY_VERSION_PATCH}")
+  set(_stage "")
+  if(SYNERGY_VERSION_STAGE)
+    set(_stage "-${SYNERGY_VERSION_STAGE}")
+  endif()
   if(SYNERGY_VERSION_RELEASE)
-    set(_version "${_base}")
+    set(_version "${_base}${_stage}")
     set(_tweak 0)
   elseif(SYNERGY_VERSION_SNAPSHOT)
-    set(_version "${_base}-snapshot+r${_rev_count}")
+    set(_version "${_base}${_stage}-snapshot+r${_rev_count}")
     set(_tweak ${_rev_count})
   else()
-    set(_version "${_base}-dev")
+    set(_version "${_base}${_stage}-dev")
     set(_tweak ${_rev_count})
   endif()
 
