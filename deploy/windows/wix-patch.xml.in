@@ -26,16 +26,10 @@
   </CPackWiXFragment>
 
   <CPackWiXFragment Id="#PRODUCT">
-    <Property Id="VC_REDIST_INSTALLED">
-      <RegistrySearch
-        Id="FindVCRedist"
-        Root="HKLM"
-        Key="SOFTWARE\Microsoft\VisualStudio\@REQUIRED_MSVC_RUNTIME_MAJOR@.0\VC\Runtimes\@BUILD_ARCHITECTURE@"
-        Name="Installed"
-        Type="raw" />
-    </Property>
-
-    <Binary Id="CustomDLL" SourceFile="@CMAKE_CURRENT_BINARY_DIR@/wix-custom.dll" />
+    <!-- Bundle the MSVC C++ runtime (CRT) so end users don't have to install the
+         Visual C++ redistributable themselves. Expands to nothing if the merge
+         module wasn't found at configure time (see deploy.cmake). -->
+    @WIX_REDIST_MERGE@
 
     <UI>
        <Publish Dialog="ExitDialog"
@@ -46,15 +40,6 @@
        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Run @CMAKE_PROJECT_PROPER_NAME@ when finished" />
     </UI>
-    <CustomAction
-      Id="CheckVCRedist"
-      BinaryRef="CustomDLL"
-      DllEntry="CheckVCRedist"
-      Execute="immediate" />
-
-    <CustomAction
-      Id="ShowVCRedistError"
-      Error="Microsoft Visual C++ Redistributable v@REQUIRED_MSVC_RUNTIME_MAJOR@.@REQUIRED_MSVC_RUNTIME_MINOR@ or later is required. Please download and install the latest version and then restart the installation. See our documentation for instructions." />
 
     <CustomAction
       Id="RunApp"
@@ -63,16 +48,9 @@
       Execute="immediate"
       Impersonate="yes"
       Return="asyncNoWait" />
+  </CPackWiXFragment>
 
-    <InstallExecuteSequence>
-      <Custom
-        Action="CheckVCRedist"
-        Before="InstallInitialize"
-        Condition="NOT Installed AND VC_REDIST_INSTALLED" />
-      <Custom
-        Action="ShowVCRedistError"
-        Before="InstallInitialize"
-        Condition="NOT Installed AND (NOT VC_REDIST_INSTALLED OR NOT VC_REDIST_VERSION_OK)" />
-    </InstallExecuteSequence>
+  <CPackWiXFragment Id="#PRODUCTFEATURE">
+    @WIX_REDIST_MERGE_REF@
   </CPackWiXFragment>
 </CPackWiXPatch>
