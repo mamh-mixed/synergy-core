@@ -205,9 +205,7 @@ void FeatureHandler::addTrademark(QDialog *parent) const
   }
 }
 
-namespace {
-
-QString pathLabel(const QString &path)
+static QString pathLabel(const QString &path)
 {
   if (QFileInfo::exists(path)) {
     return QStringLiteral("<a href=\"file://%1\">%1</a>").arg(path);
@@ -215,8 +213,6 @@ QString pathLabel(const QString &path)
   return QStringLiteral("<code>%1</code> %2")
       .arg(path, QObject::tr("(not yet created)"));
 }
-
-} // namespace
 
 void FeatureHandler::addScopeTab(QDialog *parent) const
 {
