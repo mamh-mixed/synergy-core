@@ -27,7 +27,9 @@
 #include "synergy/gui/license/LicenseHandler.h"
 
 #include <QDialog>
+#include <QIcon>
 #include <QMainWindow>
+#include <QSize>
 
 namespace deskflow::gui {
 class CoreProcess;
@@ -97,6 +99,29 @@ inline bool onCoreStart()
 inline void onTestStart()
 {
   LicenseHandler::instance().disable();
+}
+
+/**
+ * @brief Build a crisp system-tray icon from a Qt-resource SVG.
+ *
+ * Synergy shows its colored brand logo in the tray, rendered straight from a
+ * resource SVG rather than a themed monochrome icon that GNOME would size
+ * itself. A fresh SVG-backed QIcon reports no available sizes, so Qt's
+ * StatusNotifierItem backend only hands GNOME 22px and 64px renderings; GNOME
+ * upscales the nearest one to its panel slot and the icon looks blurry.
+ * Pre-rendering the common tray sizes gives GNOME a near-exact match, so it
+ * barely scales the bitmap and the icon stays sharp.
+ *
+ * @param resourcePath Qt resource path of the SVG to render.
+ * @return A multi-size icon suitable for QSystemTrayIcon::setIcon.
+ */
+inline QIcon trayIcon(const QString &resourcePath)
+{
+  const QIcon source(resourcePath);
+  QIcon icon;
+  for (const int size : {16, 22, 24, 32, 48, 64})
+    icon.addPixmap(source.pixmap(QSize(size, size)));
+  return icon;
 }
 
 } // namespace synergy::hooks

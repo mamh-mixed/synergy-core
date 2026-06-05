@@ -755,7 +755,11 @@ void MainWindow::setTrayIcon()
     if (deskflow::platform::isMac())
       m_trayIcon->setIcon(QIcon::fromTheme(themeIcon));
     else
+#ifdef SYNERGY_EXTRA_HEADER
+      m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+#else
       m_trayIcon->setIcon(QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+#endif
     return;
   }
 
