@@ -141,6 +141,19 @@ void FeatureHandler::handleAbout(QDialog *parent) const
       "Thanks to the Deskflow developers, all our contributors, and the wider open-source "
       "community."
   ));
+
+  if (auto *linkGpl = parent->findChild<QLabel *>(QStringLiteral("linkGpl"))) {
+    const auto gpl = QString(kLink).arg(kUrlGpl, kColorSecondary, QObject::tr("License: GNU GPL Version 2"));
+    const auto eula = QString(kLink).arg(kUrlEula, kColorSecondary, QObject::tr("End User License Agreement"));
+    linkGpl->setText(QStringLiteral("%1&nbsp;&nbsp;|&nbsp;&nbsp;%2").arg(gpl, eula));
+  }
+
+  if (auto *copyright = parent->findChild<QLabel *>(QStringLiteral("lblCopyright"))) {
+    copyright->setText(
+        copyright->text() + QStringLiteral("\n") +
+        QObject::tr("The Synergy logo is a trademark of Synergy App Ltd.")
+    );
+  }
 }
 
 namespace {

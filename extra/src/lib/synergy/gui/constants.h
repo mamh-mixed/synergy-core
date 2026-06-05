@@ -27,6 +27,10 @@ const auto kUrlApi = "https://symless.com/synergy/api";
 const auto kUrlWebsite = QStringLiteral("https://synergyapp.io");
 const auto kUrlSourceQuery = "source=gui";
 
+const auto kUrlGpl = QStringLiteral("https://www.gnu.org/licenses/old-licenses/gpl-2.0.html");
+const auto kUrlEula = QString("%1/eula").arg(kUrlWebsite);
+
+const auto kLink = R"(<a href="%1" style="color: %2">%3</a>)";
 const auto kLinkBuy = R"(<a href="%1" style="color: %2">Buy now</a>)";
 const auto kLinkRenew = R"(<a href="%1" style="color: %2">Renew now</a>)";
 const auto kLinkDownload = R"(<a href="%1" style="color: %2">Download now</a>)";
