@@ -34,6 +34,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFileInfo>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPalette>
@@ -117,15 +118,48 @@ void FeatureHandler::handleSettings(QDialog *parent) const
   addScopeTab(parent);
 }
 
+// The helpers below reach into upstream's AboutDialog.ui by object name and grid
+// coordinate. Those references are upstream's, not ours, so they look like magic
+// strings/numbers: the logo, version and license links share "gridLayout", where
+// row 1 is the logo, row 3 the version and row 6 a trailing spacer.
+
 void FeatureHandler::handleAbout(QDialog *parent) const
 {
   if (parent == nullptr) {
     return;
   }
+  addTagline(parent);
+  setAttribution(parent);
+  tightenVersionRow(parent);
+  addLicenseLinks(parent);
+  addTrademark(parent);
+}
+
+void FeatureHandler::addTagline(QDialog *parent) const
+{
+  auto *grid = parent->findChild<QGridLayout *>(QStringLiteral("gridLayout"));
+  if (grid == nullptr) {
+    return;
+  }
+  // Row 2 is empty, so the tagline sits under the logo; the margin is its gap to the version.
+  auto *tagline = new QLabel(QObject::tr("Unite every computer on your desk"), parent);
+  tagline->setContentsMargins(0, 0, 0, 16);
+  grid->addWidget(tagline, 2, 1);
+
+  // Collapse the trailing spacer to tighten the gap to the section below.
+  if (auto *item = grid->itemAtPosition(6, 1); item != nullptr && item->spacerItem() != nullptr) {
+    item->spacerItem()->changeSize(0, 0);
+    grid->invalidate();
+  }
+}
+
+void FeatureHandler::setAttribution(QDialog *parent) const
+{
   auto *description = parent->findChild<QLabel *>(QStringLiteral("lblDescription"));
   if (description == nullptr) {
     return;
   }
+  // Dim via alpha on the theme foreground (not a fixed grey) so it adapts to light/dark.
   description->setWordWrap(true);
   auto font = description->font();
   font.setPointSizeF(font.pointSizeF() * 0.85);
@@ -141,13 +175,28 @@ void FeatureHandler::handleAbout(QDialog *parent) const
       "Thanks to the Deskflow developers, all our contributors, and the wider open-source "
       "community."
   ));
+}
 
+void FeatureHandler::tightenVersionRow(QDialog *parent) const
+{
+  // The copy button is taller than the version text and padded the centred row; cap it.
+  if (auto *copyButton = parent->findChild<QPushButton *>(QStringLiteral("btnCopyVersion"))) {
+    copyButton->setMaximumHeight(copyButton->fontMetrics().height() + 4);
+  }
+}
+
+void FeatureHandler::addLicenseLinks(QDialog *parent) const
+{
+  // Upstream shows only the GPL link; add the EULA alongside it.
   if (auto *linkGpl = parent->findChild<QLabel *>(QStringLiteral("linkGpl"))) {
     const auto gpl = QString(kLink).arg(kUrlGpl, kColorSecondary, QObject::tr("License: GNU GPL Version 2"));
     const auto eula = QString(kLink).arg(kUrlEula, kColorSecondary, QObject::tr("End User License Agreement"));
     linkGpl->setText(QStringLiteral("%1&nbsp;&nbsp;|&nbsp;&nbsp;%2").arg(gpl, eula));
   }
+}
 
+void FeatureHandler::addTrademark(QDialog *parent) const
+{
   if (auto *copyright = parent->findChild<QLabel *>(QStringLiteral("lblCopyright"))) {
     copyright->setText(
         copyright->text() + QStringLiteral("\n") +

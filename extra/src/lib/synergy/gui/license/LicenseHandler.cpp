@@ -175,7 +175,7 @@ void LicenseHandler::handleAbout(QDialog *parent) const
   }
 
   auto *section = new QVBoxLayout();
-  section->setContentsMargins(0, 8, 0, 8);
+  section->setContentsMargins(0, 0, 0, 8);
 
   auto *registrantLabel = new QLabel(parent);
   auto *keyField = new QLineEdit(parent);

@@ -39,6 +39,11 @@ private:
   void styleUpdateNotice(QMainWindow *mainWindow) const;
   void addScopeTab(QDialog *parent) const;
   void addUpdateChannelOption(QDialog *parent) const;
+  void addTagline(QDialog *parent) const;
+  void setAttribution(QDialog *parent) const;
+  void tightenVersionRow(QDialog *parent) const;
+  void addLicenseLinks(QDialog *parent) const;
+  void addTrademark(QDialog *parent) const;
 
   QMainWindow *m_pMainWindow = nullptr;
 };
