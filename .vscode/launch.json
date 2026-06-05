@@ -6,7 +6,6 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
-      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/synergy",
       "preLaunchTask": "build-silent",
       "initCommands": ["settings set target.preload-symbols false"],
@@ -19,7 +18,6 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
-      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/unittests",
       "args": ["${input:gtest-args}"],
       "preLaunchTask": "build-silent"
@@ -29,7 +27,6 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
-      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/integtests",
       "args": ["${input:gtest-args}"],
       "preLaunchTask": "build-silent"
@@ -39,7 +36,6 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
-      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/synergy-core",
       "args": ["server"],
       "preLaunchTask": "build-silent",
@@ -52,7 +48,6 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
-      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/synergy-core",
       "args": ["client"],
       "preLaunchTask": "build-silent",
@@ -65,7 +60,6 @@
       "type": "lldb-dap",
       "cwd": "${workspaceRoot}",
       "request": "launch",
-      "runInTerminal": true,
       "program": "${workspaceFolder}/build/bin/synergy-daemon",
       "args": ["-f"],
       "preLaunchTask": "build-silent"
