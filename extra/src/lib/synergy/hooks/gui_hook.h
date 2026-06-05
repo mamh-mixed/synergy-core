@@ -76,6 +76,12 @@ inline void onSettings(QDialog *parent)
   FeatureHandler::instance().handleSettings(parent);
 }
 
+inline void onAbout(QDialog *parent)
+{
+  FeatureHandler::instance().handleAbout(parent);
+  LicenseHandler::instance().handleAbout(parent);
+}
+
 inline void onVersionCheck(QString &versionUrl)
 {
   LicenseHandler::instance().handleVersionCheck(versionUrl);

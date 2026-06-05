@@ -61,6 +61,7 @@ public:
   void handleMainWindow(QMainWindow *mainWindow, deskflow::gui::CoreProcess *coreProcess);
   bool handleAppStart();
   void handleSettings(QDialog *parent) const;
+  void handleAbout(QDialog *parent) const;
   void handleVersionCheck(QString &versionUrl);
   bool handleCoreStart();
   bool loadSettings();

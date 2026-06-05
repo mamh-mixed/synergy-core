@@ -96,6 +96,9 @@ SerialKey parseV1(const std::string &hexString, const Parts &parts)
   // e.g.: {v1;basic;name;seats;email;company;1398297600;1398384000}
   SerialKey serialKey(hexString);
   serialKey.product = Product(parts.at(1));
+  serialKey.name = parts.at(2);
+  serialKey.email = parts.at(4);
+  serialKey.company = parts.at(5);
   serialKey.warnTime = parseDate(parts.at(6));
   serialKey.expireTime = parseDate(parts.at(7));
   serialKey.isValid = true;
@@ -111,6 +114,9 @@ SerialKey parseV2(const std::string &hexString, const Parts &parts)
   SerialKey serialKey(hexString);
   serialKey.type = SerialKeyType(parts.at(1));
   serialKey.product = Product(parts.at(2));
+  serialKey.name = parts.at(3);
+  serialKey.email = parts.at(5);
+  serialKey.company = parts.at(6);
   serialKey.warnTime = parseDate(parts.at(7));
   serialKey.expireTime = parseDate(parts.at(8));
   serialKey.isValid = true;
@@ -127,6 +133,9 @@ SerialKey parseV3(const std::string &hexString, const Parts &parts)
   serialKey.isOffline = (parts.at(1) == "offline");
   serialKey.type = SerialKeyType(parts.at(2));
   serialKey.product = Product(parts.at(3));
+  serialKey.name = parts.at(4);
+  serialKey.email = parts.at(6);
+  serialKey.company = parts.at(7);
   serialKey.warnTime = parseDate(parts.at(8));
   serialKey.expireTime = parseDate(parts.at(9));
   serialKey.isValid = true;

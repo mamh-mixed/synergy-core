@@ -58,6 +58,9 @@ struct SerialKey
   std::optional<time_point> warnTime = std::nullopt;
   std::optional<time_point> expireTime = std::nullopt;
   bool isOffline = false;
+  std::string name = "";
+  std::string email = "";
+  std::string company = "";
 
 private:
   explicit SerialKey(Product::Edition edition) : product(edition)

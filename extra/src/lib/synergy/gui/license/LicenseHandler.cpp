@@ -34,12 +34,17 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDialog>
+#include <QHBoxLayout>
 #include <QHostInfo>
+#include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QObject>
 #include <QProcessEnvironment>
+#include <QPushButton>
+#include <QVBoxLayout>
 #include <QSysInfo>
 #include <QTimer>
 #include <QtCore>
@@ -149,6 +154,64 @@ void LicenseHandler::handleSettings(QDialog *parent) const
   // To be wired when the synergy widget-injection layer lands; until then,
   // license-tier clamping happens in clampFeatures() at app start and on
   // license change.
+}
+
+void LicenseHandler::handleAbout(QDialog *parent) const
+{
+  if (!m_enabled || parent == nullptr) {
+    return;
+  }
+
+  if (!license().serialKey().isValid) {
+    return;
+  }
+
+  auto *mainLayout = qobject_cast<QBoxLayout *>(parent->layout());
+  auto *anchor = parent->findChild<QWidget *>(QStringLiteral("frameLogo"));
+  const int index = (mainLayout && anchor) ? mainLayout->indexOf(anchor) : -1;
+  if (index < 0) {
+    qWarning("about: no frameLogo anchor, skipping license info");
+    return;
+  }
+
+  auto *section = new QVBoxLayout();
+  section->setContentsMargins(0, 8, 0, 8);
+
+  auto *registrantLabel = new QLabel(parent);
+  auto *keyField = new QLineEdit(parent);
+  keyField->setReadOnly(true);
+  auto *changeButton = new QPushButton(QObject::tr("Change"), parent);
+
+  section->addWidget(registrantLabel);
+  auto *keyRow = new QHBoxLayout();
+  keyRow->addWidget(keyField, 1);
+  keyRow->addWidget(changeButton);
+  section->addLayout(keyRow);
+
+  // The serial key can change while the About dialog is open (via the Change
+  // button), so refresh the widgets from the current license each time rather
+  // than building them once with whatever key was active at construction.
+  const auto refresh = [registrantLabel, keyField] {
+    const auto &k = LicenseHandler::instance().license().serialKey();
+    const auto name = QString::fromStdString(k.name);
+    const auto company = QString::fromStdString(k.company);
+    QString registrant = name;
+    if (!company.isEmpty()) {
+      registrant = name.isEmpty() ? company : QStringLiteral("%1, %2").arg(name, company);
+    }
+    registrantLabel->setText(QObject::tr("Registered to %1").arg(registrant));
+    registrantLabel->setVisible(!registrant.isEmpty());
+    keyField->setText(QString::fromStdString(k.toString()));
+    keyField->setCursorPosition(0);
+  };
+  refresh();
+
+  QObject::connect(changeButton, &QPushButton::clicked, changeButton, [refresh] {
+    LicenseHandler::instance().showSerialKeyDialog();
+    refresh();
+  });
+
+  mainLayout->insertLayout(index + 1, section);
 }
 
 void LicenseHandler::handleVersionCheck(QString &versionUrl)

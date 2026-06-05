@@ -117,6 +117,32 @@ void FeatureHandler::handleSettings(QDialog *parent) const
   addScopeTab(parent);
 }
 
+void FeatureHandler::handleAbout(QDialog *parent) const
+{
+  if (parent == nullptr) {
+    return;
+  }
+  auto *description = parent->findChild<QLabel *>(QStringLiteral("lblDescription"));
+  if (description == nullptr) {
+    return;
+  }
+  description->setWordWrap(true);
+  auto font = description->font();
+  font.setPointSizeF(font.pointSizeF() * 0.85);
+  description->setFont(font);
+  auto palette = description->palette();
+  auto color = palette.color(QPalette::WindowText);
+  color.setAlphaF(0.6);
+  palette.setColor(QPalette::WindowText, color);
+  description->setPalette(palette);
+  description->setText(QObject::tr(
+      "Synergy was originally created by Chris Schoeneman and today builds on Deskflow, "
+      "the open-source upstream project maintained by Nick Bolton and Chris Rizzitello. "
+      "Thanks to the Deskflow developers, all our contributors, and the wider open-source "
+      "community."
+  ));
+}
+
 namespace {
 
 QString pathLabel(const QString &path)

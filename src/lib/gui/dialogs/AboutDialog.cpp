@@ -14,6 +14,10 @@
 #include "common/VersionInfo.h"
 #include "gui/StyleUtils.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QClipboard>
 
 AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique<Ui::AboutDialog>()}
@@ -52,6 +56,10 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
 
   ui->btnOk->setDefault(true);
   connect(ui->btnOk, &QPushButton::clicked, this, &AboutDialog::close);
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onAbout(this);
+#endif
 }
 
 void AboutDialog::copyVersionText() const

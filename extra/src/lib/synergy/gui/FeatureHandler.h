@@ -32,6 +32,7 @@ public:
   void handleMainWindow(QMainWindow *mainWindow);
   void handleAppStart();
   void handleSettings(QDialog *parent) const;
+  void handleAbout(QDialog *parent) const;
 
 private:
   void addTestMenu();
