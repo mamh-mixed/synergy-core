@@ -246,9 +246,10 @@ jobs:
       - name: Package (Windows)
         if: ${{ !steps.vars.outputs.skip-package && runner.os == 'Windows' }}
         run: python ./scripts/package.py
-        env:
-          WINDOWS_PFX_CERTIFICATE: ${{ secrets.WINDOWS_PFX }}
-          WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASS }}
+        # HACK: Windows code signing disabled.
+        # env:
+        #   WINDOWS_PFX_CERTIFICATE: ${{ secrets.WINDOWS_PFX }}
+        #   WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASS }}
 
       - name: Package (macOS)
         if: ${{ !steps.vars.outputs.skip-package && runner.os == 'macOS' }}
