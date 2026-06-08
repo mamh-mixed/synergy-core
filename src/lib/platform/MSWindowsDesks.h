@@ -174,10 +174,18 @@ public:
 
   void setPendingTouchClick(SInt32 x, SInt32 y);
 
-  //! Whether touch click replay is enabled (SYNERGY_TOUCH_CLICK_REPLAY).
+  //! Enable/disable touch click replay (driven by the touchActivateScreen toggle).
   /*!
-  Lets callers (e.g. on-screen tap handling) check the safety gate before
-  consuming a touch, so native pass-through is preserved when replay is off.
+  Called from MSWindowsScreen::setOptions when the "switch screens on touch"
+  option changes, so click replay follows that single toggle. An explicit
+  SYNERGY_TOUCH_CLICK_REPLAY env override (set in the ctor) wins over \c enabled.
+  */
+  void setTouchClickReplay(bool enabled);
+
+  //! Whether touch click replay is currently enabled.
+  /*!
+  Lets callers (e.g. on-screen tap handling) check the gate before consuming a
+  touch, so native pass-through is preserved when replay is off.
   */
   bool isTouchClickReplayEnabled() const { return m_touchClickReplay; }
 
@@ -339,25 +347,24 @@ private:
   SInt32 m_pendingTouchY = 0;
   DWORD m_pendingTouchTick = 0; // GetTickCount when the touch was detected (timing)
 
-  // SAFETY GATE (touch-activates-screen v8).
+  // CLICK-REPLAY GATE (touch-activates-screen v9).
   //
-  // When false (the default), deskFakeTouchClick never synthesizes a click.
-  // The screen still activates on touch, but the user's real finger touch is
-  // what reaches the application — we never inject a click at all. This
-  // eliminates the "click lands in the wrong place" failure mode entirely, at
-  // the cost of the user needing a second tap for the legacy app to register
-  // the press.
+  // When false, deskFakeTouchClick never synthesizes a click: the screen still
+  // activates on touch, but the user's real finger touch is what reaches the
+  // app — we never inject, so a click can never land on the wrong control (at
+  // the cost of possibly needing a second tap on a legacy app).
   //
-  // When true, deskFakeTouchClick replays a real left mouse click
-  // (WM_LBUTTONDOWN/UP) at the exact point the finger touched, mapped across
-  // the full virtual desktop so it lands correctly on any monitor. This is the
-  // v8 fix for the "needs a second tap" symptom.
+  // When true, deskFakeTouchClick replays a real left click (WM_LBUTTONDOWN/UP)
+  // at the exact point the finger touched, mapped across the full virtual
+  // desktop so it lands correctly on any monitor — the fix for "needs a second
+  // tap".
   //
-  // For safety-critical deployments (e.g. control consoles) a missed first tap
-  // is acceptable; a click on the wrong control is not — so this defaults OFF
-  // and ships safe. Enable it for validation on the target hardware by setting
-  // the SYNERGY_TOUCH_CLICK_REPLAY=1 environment variable (resolved once in the
-  // constructor, logged at startup). Flip the default only once validated.
+  // v9: this now FOLLOWS the "switch screens on touch" toggle. setTouchClickReplay
+  // is called from MSWindowsScreen::setOptions, so enabling the toggle (which
+  // already propagates server->clients) turns replay on everywhere — no env var
+  // needed. m_touchClickReplayOverride holds the optional env override:
+  //   0 = none (follow the toggle), 1 = forced ON, -1 = forced OFF (kill-switch).
   bool m_touchClickReplay = false;
+  int m_touchClickReplayOverride = 0;
 
 };

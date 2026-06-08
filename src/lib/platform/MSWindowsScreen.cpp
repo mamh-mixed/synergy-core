@@ -489,6 +489,10 @@ void MSWindowsScreen::setOptions(const OptionsList &options)
     if (options[i] == kOptionTouchActivateScreen) {
       m_touchActivateScreen = (options[i + 1] != 0);
       m_hook.setTouchActivateScreen(m_touchActivateScreen);
+      // Click replay folds into this one toggle: enabling "switch screens on
+      // touch" also enables the touch click replay (an env override can still
+      // force it on/off). See MSWindowsDesks::setTouchClickReplay.
+      m_desks->setTouchClickReplay(m_touchActivateScreen);
       LOG((CLOG_DEBUG "touch activate screen set to %s", m_touchActivateScreen ? "true" : "false"));
     }
   }

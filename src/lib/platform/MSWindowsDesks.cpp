@@ -158,20 +158,43 @@ MSWindowsDesks::MSWindowsDesks(
   m_keyLayout = AppUtilWindows::instance().getCurrentKeyboardLayout();
   resetOptions();
 
-  // Touch-activate click replay is OFF by default: the safe behaviour never
-  // synthesizes a click, so it can never land on the wrong control (the user
-  // may need a second tap for a legacy app). Enable it for testing on the
-  // target hardware by setting SYNERGY_TOUCH_CLICK_REPLAY=1 in the environment.
-  // We log the resolved state loudly so field logs make the mode unambiguous.
-  // (GetEnvironmentVariableA avoids the deprecated std::getenv, which would
-  // fail the MSVC warnings-as-errors build.)
+  // Touch-activate click replay now FOLLOWS the "switch screens on touch"
+  // toggle (touchActivateScreen): when that option is on, deskFakeTouchClick
+  // replays a real click; when it's off, it never injects. setTouchClickReplay
+  // is driven from MSWindowsScreen::setOptions, so no env var is needed in the
+  // field. The SYNERGY_TOUCH_CLICK_REPLAY env var is kept only as an override:
+  //   =0/false/no -> force replay OFF regardless of the toggle (safety kill-switch)
+  //   =1/true/yes -> force replay ON  regardless of the toggle (testing/legacy)
+  // Absent -> follow the toggle. (GetEnvironmentVariableA avoids the deprecated
+  // std::getenv, which would fail the MSVC warnings-as-errors build.)
   char replayEnv[8] = {};
   DWORD replayLen = GetEnvironmentVariableA("SYNERGY_TOUCH_CLICK_REPLAY", replayEnv, sizeof(replayEnv));
-  m_touchClickReplay = (replayLen > 0 && replayLen < sizeof(replayEnv) &&
-                        (replayEnv[0] == '1' || replayEnv[0] == 't' || replayEnv[0] == 'T' ||
-                         replayEnv[0] == 'y' || replayEnv[0] == 'Y'));
-  LOG((CLOG_INFO "touch: click replay %s (set SYNERGY_TOUCH_CLICK_REPLAY=1 to enable)",
-       m_touchClickReplay ? "ENABLED" : "disabled"));
+  if (replayLen > 0 && replayLen < sizeof(replayEnv)) {
+    char c = replayEnv[0];
+    if (c == '0' || c == 'f' || c == 'F' || c == 'n' || c == 'N') {
+      m_touchClickReplayOverride = -1;
+    } else if (c == '1' || c == 't' || c == 'T' || c == 'y' || c == 'Y') {
+      m_touchClickReplayOverride = 1;
+    }
+  }
+  m_touchClickReplay = (m_touchClickReplayOverride == 1);
+  LOG((CLOG_INFO "touch: click replay follows 'switch screens on touch' toggle%s",
+       m_touchClickReplayOverride == 1  ? " (env override: forced ON)" :
+       m_touchClickReplayOverride == -1 ? " (env override: forced OFF)" : ""));
+}
+
+void MSWindowsDesks::setTouchClickReplay(bool enabled)
+{
+  // Apply the env-var override on top of the toggle state.
+  if (m_touchClickReplayOverride == 1) {
+    enabled = true;
+  } else if (m_touchClickReplayOverride == -1) {
+    enabled = false;
+  }
+  if (enabled != m_touchClickReplay) {
+    m_touchClickReplay = enabled;
+    LOG((CLOG_INFO "touch: click replay %s", enabled ? "ENABLED" : "disabled"));
+  }
 }
 
 MSWindowsDesks::~MSWindowsDesks()
