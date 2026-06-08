@@ -23,10 +23,10 @@ on:
       platform:
         description: "Build only one platform (blank = all)"
         required: false
-        default: ''
+        default: ""
         type: choice
         options:
-          - ''
+          - ""
           - windows
           - macos
           - linux
@@ -38,9 +38,10 @@ on:
   schedule:
     - cron: "0 5 * * *" # 5am UTC nightly snapshot
 
+# Cancel superseded PR builds; pushes to branches/tags always run to completion.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -252,7 +253,6 @@ jobs:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
-
   build-macos:
     needs: lint-clang
     if: ${{ inputs.platform == '' || inputs.platform == 'macos' }}
@@ -421,7 +421,6 @@ jobs:
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
-
 
   build-linux:
     needs: lint-clang
@@ -640,7 +639,6 @@ jobs:
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
-
 
   build-flatpak:
     needs: lint-clang
