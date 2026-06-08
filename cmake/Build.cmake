@@ -39,7 +39,10 @@ endmacro()
 macro(warnings_as_errors)
   if(WIN32)
     message(STATUS "Enabling warnings as errors (MSVC)")
-    add_compile_options(/WX)
+    # /EHsc: enable standard C++ unwind semantics. Normally CMake's default MSVC
+    # flags include it, but the vcpkg toolchain can reset CMAKE_CXX_FLAGS on a
+    # clean configure and drop it, which makes C4530 fatal under /WX. Assert it.
+    add_compile_options(/WX /EHsc)
   elseif(UNIX)
     message(STATUS "Enabling warnings as errors (GNU/Clang)")
     add_compile_options(-Werror)

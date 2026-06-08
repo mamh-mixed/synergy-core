@@ -1393,7 +1393,18 @@ void Server::handleTouchActivatedPrimaryEvent(const Event &event, void *)
 
     switchScreen(m_primaryClient, x, y, false);
 
+    // Raise the window under the touch point (no-op cost when already foreground).
     m_primaryClient->activateWindowAt(x, y);
+
+    // Replay a real click at the touch point on the PRIMARY too. Without this the
+    // first touch that returns control to the server only activates the window and
+    // is swallowed as an activation click, forcing the user to tap twice — the same
+    // legacy-app symptom the secondary path already fixes via deskFakeTouchClick.
+    // This routes through the identical, safety-gated replay path
+    // (SYNERGY_TOUCH_CLICK_REPLAY): a no-op when replay is disabled (ships safe),
+    // and a real left click at exactly (x,y) when enabled — never a stored or
+    // transformed coordinate, so it can never land on the wrong control.
+    m_primaryClient->fakeTouchClick(x, y);
 
     m_touchSwitchCooldown.reset();
     LOG((CLOG_DEBUG1 "touch switch cooldown started"));

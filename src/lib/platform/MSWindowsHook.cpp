@@ -48,6 +48,11 @@ static BOOL g_isOnScreen = TRUE;
 static bool g_touchActivateScreen = false;
 static SInt32 g_xCenter = 0;
 static SInt32 g_yCenter = 0;
+// One-shot suppression of the stray native touch click that the switch-
+// triggering touch leaves behind (prevents a double-click on switch-in).
+static DWORD g_suppressTouchUntil = 0;
+static SInt32 g_suppressTouchX = 0;
+static SInt32 g_suppressTouchY = 0;
 
 MSWindowsHook::MSWindowsHook()
 {
@@ -156,6 +161,13 @@ void MSWindowsHook::setMode(EHookMode mode)
 void MSWindowsHook::setTouchActivateScreen(bool enabled)
 {
   g_touchActivateScreen = enabled;
+}
+
+void MSWindowsHook::suppressNextTouch(SInt32 x, SInt32 y)
+{
+  g_suppressTouchX = x;
+  g_suppressTouchY = y;
+  g_suppressTouchUntil = GetTickCount() + 700;
 }
 
 void MSWindowsHook::setIsPrimary(bool primary)
@@ -631,6 +643,19 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
         SInt32 dyc = y - g_yCenter;
         if (dxc >= -1 && dxc <= 1 && dyc >= -1 && dyc <= 1) {
           LOG((CLOG_DEBUG2 "hook: ignoring touch at cursor center %d,%d", x, y));
+          return 1;
+        }
+
+        // Eat the stray transition touch click: the touch that triggered a
+        // switch leaves a native touch->mouse click behind; if it lands after
+        // the switch completes it stacks on the deskEnter replay = double click.
+        // One-shot, bounded to near the trigger point and a short time window.
+        if (wParam == WM_LBUTTONDOWN && g_suppressTouchUntil != 0 &&
+            GetTickCount() < g_suppressTouchUntil &&
+            abs(static_cast<int>(x - g_suppressTouchX)) <= 60 &&
+            abs(static_cast<int>(y - g_suppressTouchY)) <= 60) {
+          g_suppressTouchUntil = 0; // consume once
+          LOG((CLOG_DEBUG "hook: suppressed stray transition touch click at %d,%d (replay covers it)", x, y));
           return 1;
         }
 

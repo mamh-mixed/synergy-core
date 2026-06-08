@@ -157,6 +157,21 @@ MSWindowsDesks::MSWindowsDesks(
   m_deskClass = createDeskWindowClass(m_isPrimary);
   m_keyLayout = AppUtilWindows::instance().getCurrentKeyboardLayout();
   resetOptions();
+
+  // Touch-activate click replay is OFF by default: the safe behaviour never
+  // synthesizes a click, so it can never land on the wrong control (the user
+  // may need a second tap for a legacy app). Enable it for testing on the
+  // target hardware by setting SYNERGY_TOUCH_CLICK_REPLAY=1 in the environment.
+  // We log the resolved state loudly so field logs make the mode unambiguous.
+  // (GetEnvironmentVariableA avoids the deprecated std::getenv, which would
+  // fail the MSVC warnings-as-errors build.)
+  char replayEnv[8] = {};
+  DWORD replayLen = GetEnvironmentVariableA("SYNERGY_TOUCH_CLICK_REPLAY", replayEnv, sizeof(replayEnv));
+  m_touchClickReplay = (replayLen > 0 && replayLen < sizeof(replayEnv) &&
+                        (replayEnv[0] == '1' || replayEnv[0] == 't' || replayEnv[0] == 'T' ||
+                         replayEnv[0] == 'y' || replayEnv[0] == 'Y'));
+  LOG((CLOG_INFO "touch: click replay %s (set SYNERGY_TOUCH_CLICK_REPLAY=1 to enable)",
+       m_touchClickReplay ? "ENABLED" : "disabled"));
 }
 
 MSWindowsDesks::~MSWindowsDesks()
@@ -332,12 +347,25 @@ void MSWindowsDesks::fakeTouchClick(SInt32 x, SInt32 y) const
   sendMessage(DESKFLOW_MSG_FAKE_TOUCH, static_cast<WPARAM>(x), static_cast<LPARAM>(y));
 }
 
+void MSWindowsDesks::postFakeTouchClick(SInt32 x, SInt32 y) const
+{
+  // Non-blocking: post to the desk thread and return immediately (no
+  // waitForDesk). A flood of rapid on-screen taps therefore cannot block the
+  // input thread once-per-tap and hang the client; the desk thread drains the
+  // queued clicks at its own pace.
+  if (m_activeDesk != NULL && m_activeDesk->m_window != NULL) {
+    PostThreadMessage(m_activeDesk->m_threadID, DESKFLOW_MSG_FAKE_TOUCH,
+                      static_cast<WPARAM>(x), static_cast<LPARAM>(y));
+  }
+}
+
 void MSWindowsDesks::setPendingTouchClick(SInt32 x, SInt32 y)
 {
   m_pendingTouchX = x;
   m_pendingTouchY = y;
   m_pendingTouchUp = true;
   m_touchLifted = true;
+  m_pendingTouchTick = GetTickCount();
   LOG((CLOG_DEBUG "touch: LL hook path, pending click at %d,%d for deskEnter replay", x, y));
 }
 
@@ -533,30 +561,72 @@ LRESULT CALLBACK MSWindowsDesks::secondaryDeskProc(HWND hwnd, UINT msg, WPARAM w
 
 void MSWindowsDesks::deskMouseMove(SInt32 x, SInt32 y) const
 {
-  // when using absolute positioning with mouse_event(),
-  // the normalized device coordinates range over only
-  // the primary screen.
-  SInt32 w = GetSystemMetrics(SM_CXSCREEN);
-  SInt32 h = GetSystemMetrics(SM_CYSCREEN);
+  // Map the absolute move across the ENTIRE virtual desktop, not just the
+  // primary monitor. MOUSEEVENTF_ABSOLUTE without MOUSEEVENTF_VIRTUALDESK
+  // normalizes 0..65535 over the primary monitor only, so on multi-monitor
+  // setups (or when the target display is not the primary) the cursor lands on
+  // the wrong physical pixel — the touchscreen could be a secondary display.
+  // This is a critical correctness fix: a click must land exactly where the
+  // user touched. (x,y) are virtual-screen pixel coordinates.
+  SInt32 vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+  SInt32 vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+  SInt32 vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  SInt32 vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+  // Defensive fallback: if the virtual-desktop metrics are unavailable for any
+  // reason, fall back to primary-monitor metrics (single-monitor behaviour).
+  if (vw <= 1) {
+    vx = 0;
+    vw = GetSystemMetrics(SM_CXSCREEN);
+  }
+  if (vh <= 1) {
+    vy = 0;
+    vh = GetSystemMetrics(SM_CYSCREEN);
+  }
+
   send_mouse_input(
-      MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, (DWORD)((65535.0f * x) / (w - 1) + 0.5f),
-      (DWORD)((65535.0f * y) / (h - 1) + 0.5f), 0
+      MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+      (DWORD)((65535.0f * (x - vx)) / (vw - 1) + 0.5f),
+      (DWORD)((65535.0f * (y - vy)) / (vh - 1) + 0.5f), 0
   );
 }
 
 void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
 {
+  // SAFETY GATE: never synthesize a click unless replay is explicitly
+  // enabled (SYNERGY_TOUCH_CLICK_REPLAY=1). When disabled, the screen still
+  // activates on touch and the user's real finger touch reaches the app — we
+  // never inject a click at all, so it can never land on the wrong control.
+  // See m_touchClickReplay in the header for the full rationale.
+  if (!m_touchClickReplay) {
+    LOG((CLOG_DEBUG "touch: click replay disabled, not injecting at %d,%d "
+                    "(real touch passes through; second tap may be needed)", x, y));
+    return;
+  }
+
+  DWORD t0 = GetTickCount();
   POINT pt = {x, y};
   HWND target = WindowFromPoint(pt);
   HWND fg = GetForegroundWindow();
 
-  LOG((CLOG_DEBUG "touch: injecting at %d,%d target=0x%08x fg=0x%08x",
+  LOG((CLOG_DEBUG "touch: replay click at %d,%d target=0x%08x fg=0x%08x",
        x, y, target, fg));
 
+  // Bring the window under the touch point to the foreground *before* clicking,
+  // so the click acts on its control rather than merely activating the window.
+  // Legacy Win32 apps otherwise swallow the first click as an activation click,
+  // which is the root of the "user must tap twice" symptom.
+  //
+  // Always re-assert it — even when the target already looks like the foreground
+  // window. On switch-in the window is reported foreground before its input
+  // queue/focus has actually settled (synergy's overlay is still getting out of
+  // the way), so the replayed click gets swallowed and the user has to re-tap.
+  // The AttachThreadInput + SetForegroundWindow here forces the input queue to
+  // be attached and the window genuinely active so the click lands first time.
   if (target) {
     HWND root = GetAncestor(target, GA_ROOT);
-    if (root && root != fg) {
-      LOG((CLOG_DEBUG "touch: target root=0x%08x != fg, activating", root));
+    if (root) {
+      LOG((CLOG_DEBUG "touch: activating window root=0x%08x before click (fg was 0x%08x)", root, fg));
       DWORD targetThread = GetWindowThreadProcessId(root, NULL);
       DWORD curThread = GetCurrentThreadId();
 
@@ -565,6 +635,9 @@ void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
         attached = AttachThreadInput(targetThread, curThread, TRUE);
       }
 
+      // Zero-delta move: nudges the input system so the foreground-lock timer
+      // lets SetForegroundWindow succeed. No cursor movement, so it cannot
+      // affect where the click lands.
       mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0);
       SetForegroundWindow(root);
       BringWindowToTop(root);
@@ -575,54 +648,49 @@ void MSWindowsDesks::deskFakeTouchClick(SInt32 x, SInt32 y) const
     }
   }
 
-  static bool touchInitialized = false;
-  static bool touchInitAttempted = false;
-  if (!touchInitAttempted) {
-    touchInitAttempted = true;
-    touchInitialized = InitializeTouchInjection(2, TOUCH_FEEDBACK_NONE) != 0;
-    if (touchInitialized) {
-      LOG((CLOG_DEBUG "touch: InitializeTouchInjection succeeded"));
-    } else {
-      LOG((CLOG_WARN "touch: InitializeTouchInjection failed, error=%lu, will use mouse fallback",
-           GetLastError()));
-    }
-  }
+  // Deliver a REAL left mouse click (WM_LBUTTONDOWN/UP) at the exact touch
+  // location. We deliberately synthesize classic mouse button events rather
+  // than InjectTouchInput: the customer's legacy Win32 app — like many
+  // pre-touch apps — handles mouse messages but ignores WM_POINTER touch
+  // messages, and Windows' automatic touch->mouse promotion is unreliable on
+  // Windows 10 IoT. deskMouseMove positions the cursor across the full virtual
+  // desktop, so the click lands on the correct physical pixel on any monitor.
+  //
+  // SAFETY: the only coordinate ever used is (x,y) — where the finger
+  // physically touched, captured at touch-down. We never click a remembered or
+  // coordinate-transformed location, so the click cannot land on a wrong
+  // control. The logged coordinate must match the touch point in field tests.
+  // Atomic move+press at the EXACT pixel. Previously this was three separate
+  // SendInput calls (move, then a position-less down, then up), so the down
+  // clicked wherever the cursor happened to be — if anything nudged it between
+  // the move and the press (the finger still on the glass, a relayed mouse
+  // event, the move not settling) the click landed a few pixels off and missed
+  // small controls (e.g. Paint colour swatches) even though it logged "at x,y".
+  // Carrying the absolute virtual-desktop position on the button-down, in a
+  // single SendInput batch with the up, makes the click land exactly at (x,y).
+  SInt32 vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+  SInt32 vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+  SInt32 vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+  SInt32 vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+  if (vw <= 1) { vx = 0; vw = GetSystemMetrics(SM_CXSCREEN); }
+  if (vh <= 1) { vy = 0; vh = GetSystemMetrics(SM_CYSCREEN); }
+  LONG nx = (LONG)((65535.0f * (x - vx)) / (vw - 1) + 0.5f);
+  LONG ny = (LONG)((65535.0f * (y - vy)) / (vh - 1) + 0.5f);
 
-  if (touchInitialized) {
-    POINTER_TOUCH_INFO contact = {};
-    contact.pointerInfo.pointerType = PT_TOUCH;
-    contact.pointerInfo.pointerId = 1;
-    contact.pointerInfo.ptPixelLocation.x = x;
-    contact.pointerInfo.ptPixelLocation.y = y;
-    contact.pointerInfo.pointerFlags =
-        POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-    contact.touchFlags = TOUCH_FLAG_NONE;
-    contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_ORIENTATION |
-                        TOUCH_MASK_PRESSURE;
-    contact.orientation = 90;
-    contact.pressure = 32000;
-    contact.rcContact.left = x - 2;
-    contact.rcContact.right = x + 2;
-    contact.rcContact.top = y - 2;
-    contact.rcContact.bottom = y + 2;
+  INPUT click[2] = {};
+  click[0].type = INPUT_MOUSE;
+  click[0].mi.dx = nx;
+  click[0].mi.dy = ny;
+  click[0].mi.dwFlags =
+      MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK | MOUSEEVENTF_LEFTDOWN;
+  click[1].type = INPUT_MOUSE;
+  click[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+  SendInput(2, click, sizeof(INPUT));
 
-    if (!InjectTouchInput(1, &contact)) {
-      LOG((CLOG_DEBUG "touch: InjectTouchInput DOWN failed, error=%lu, falling back to mouse",
-           GetLastError()));
-      deskMouseMove(x, y);
-      send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
-      send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
-      return;
-    }
-
-    PostThreadMessage(GetCurrentThreadId(), DESKFLOW_MSG_TOUCH_UPDATE,
-                      static_cast<WPARAM>(x), static_cast<LPARAM>(y));
-    return;
-  }
-
-  deskMouseMove(x, y);
-  send_mouse_input(MOUSEEVENTF_LEFTDOWN, 0, 0, 0);
-  send_mouse_input(MOUSEEVENTF_LEFTUP, 0, 0, 0);
+  POINT after = {};
+  GetCursorPos(&after);
+  LOG((CLOG_INFO "touch: replayed left click at %d,%d (cursor landed %d,%d, inject %u ms, total %u ms from touch)",
+       x, y, after.x, after.y, GetTickCount() - t0, GetTickCount() - m_pendingTouchTick));
 }
 
 void MSWindowsDesks::deskMouseRelativeMove(SInt32 dx, SInt32 dy) const
@@ -743,8 +811,8 @@ void MSWindowsDesks::deskEnter(Desk *desk)
   }
 
   if (touchEnter) {
-    LOG((CLOG_DEBUG "touch: deskEnter, injecting at %d,%d",
-         m_pendingTouchX, m_pendingTouchY));
+    LOG((CLOG_INFO "touch: deskEnter, injecting at %d,%d (%u ms from touch->switch arrival)",
+         m_pendingTouchX, m_pendingTouchY, GetTickCount() - m_pendingTouchTick));
     PostThreadMessage(desk->m_threadID, DESKFLOW_MSG_FAKE_TOUCH,
                       static_cast<WPARAM>(m_pendingTouchX),
                       static_cast<LPARAM>(m_pendingTouchY));

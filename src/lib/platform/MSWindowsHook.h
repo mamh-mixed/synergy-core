@@ -52,6 +52,16 @@ public:
 
   void setTouchActivateScreen(bool enabled);
 
+  //! Suppress the next physical touch click near (x,y) for a short window.
+  /*!
+  Called when a touch triggers a screen switch. The triggering touch's native
+  (Windows touch->mouse) click can arrive AFTER the switch completes — by then
+  the screen is on-screen so the hook no longer eats it, and it stacks on top of
+  the deskEnter replay click, producing a double-click. This eats that one stray
+  touchSig=yes click near the trigger point; the replay (touchSig=no) is intact.
+  */
+  void suppressNextTouch(SInt32 x, SInt32 y);
+
   void setIsPrimary(bool primary);
 
   void setIsOnScreen(bool onScreen);

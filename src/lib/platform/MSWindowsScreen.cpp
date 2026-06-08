@@ -978,6 +978,14 @@ bool MSWindowsScreen::onPreDispatch(HWND hwnd, UINT message, WPARAM wParam, LPAR
     LOG((CLOG_DEBUG "DESKFLOW_MSG_TOUCH: touchActive=%d isOnScreen=%d isPrimary=%d at %d,%d",
          m_touchActivateScreen ? 1 : 0, m_isOnScreen ? 1 : 0, m_isPrimary ? 1 : 0,
          (int)wParam, (int)lParam));
+    // When already on this screen we do NOT inject anything: Windows already
+    // promotes the physical touch to a real click and the low-level hook lets it
+    // pass through to the app (see MSWindowsHook mouseLLHook, the injected
+    // pass-through). Injecting an extra synthetic click here double-clicks the
+    // control (a toggle flips twice = no visible change) and the extra injected
+    // events overload the low-level hook until Windows silently removes it,
+    // killing all touch detection. So on-screen taps are left to the OS; we only
+    // act when off-screen, to switch the active screen here.
     if (!m_touchActivateScreen || m_isOnScreen)
       return true;
     {
@@ -1482,6 +1490,9 @@ bool MSWindowsScreen::onPointerInput(WPARAM wParam, LPARAM lParam)
     return false;
   }
 
+  // On-screen taps are left to the OS (Windows promotes touch to a real click
+  // that the hook passes through); injecting here double-clicks the control and
+  // overloads the low-level hook. Only act when off-screen, to switch here.
   if (!m_touchActivateScreen || m_isOnScreen)
     return false;
 

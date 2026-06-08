@@ -174,6 +174,13 @@ public:
 
   void setPendingTouchClick(SInt32 x, SInt32 y);
 
+  //! Whether touch click replay is enabled (SYNERGY_TOUCH_CLICK_REPLAY).
+  /*!
+  Lets callers (e.g. on-screen tap handling) check the safety gate before
+  consuming a touch, so native pass-through is preserved when replay is off.
+  */
+  bool isTouchClickReplayEnabled() const { return m_touchClickReplay; }
+
   //! Fake mouse move
   /*!
   Synthesize a mouse move to the absolute coordinates \c x,y.
@@ -193,6 +200,16 @@ public:
   void fakeMouseWheel(SInt32 xDelta, SInt32 yDelta) const;
 
   void fakeTouchClick(SInt32 x, SInt32 y) const;
+
+  //! Non-blocking fake touch click (for rapid on-screen taps).
+  /*!
+  Like fakeTouchClick but posts the request to the desk thread WITHOUT
+  waiting for completion. Used for on-screen tap replay, where a burst of
+  rapid taps would otherwise block the input thread (via waitForDesk) once
+  per tap and hang the client. The desk thread drains queued clicks at its
+  own pace; order of distinct taps is preserved by the message queue.
+  */
+  void postFakeTouchClick(SInt32 x, SInt32 y) const;
 
   //@}
 
@@ -320,5 +337,27 @@ private:
   bool m_touchLifted = false;
   SInt32 m_pendingTouchX = 0;
   SInt32 m_pendingTouchY = 0;
+  DWORD m_pendingTouchTick = 0; // GetTickCount when the touch was detected (timing)
+
+  // SAFETY GATE (touch-activates-screen v8).
+  //
+  // When false (the default), deskFakeTouchClick never synthesizes a click.
+  // The screen still activates on touch, but the user's real finger touch is
+  // what reaches the application — we never inject a click at all. This
+  // eliminates the "click lands in the wrong place" failure mode entirely, at
+  // the cost of the user needing a second tap for the legacy app to register
+  // the press.
+  //
+  // When true, deskFakeTouchClick replays a real left mouse click
+  // (WM_LBUTTONDOWN/UP) at the exact point the finger touched, mapped across
+  // the full virtual desktop so it lands correctly on any monitor. This is the
+  // v8 fix for the "needs a second tap" symptom.
+  //
+  // For safety-critical deployments (e.g. control consoles) a missed first tap
+  // is acceptable; a click on the wrong control is not — so this defaults OFF
+  // and ships safe. Enable it for validation on the target hardware by setting
+  // the SYNERGY_TOUCH_CLICK_REPLAY=1 environment variable (resolved once in the
+  // constructor, logged at startup). Flip the default only once validated.
+  bool m_touchClickReplay = false;
 
 };
