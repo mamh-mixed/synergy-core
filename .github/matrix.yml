@@ -75,10 +75,6 @@ target:
     runs-on: ubuntu-latest
     container: rockylinux:9
 
-  - name: rocky-10-x86_64
-    runs-on: ubuntu-latest
-    container: rockylinux:10
-
   - name: opensuse-tumbleweed-x86_64
     runs-on: ubuntu-latest
     container: opensuse/tumbleweed:latest

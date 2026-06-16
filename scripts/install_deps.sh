@@ -144,7 +144,8 @@ install_rhel_deps() {
   . /etc/os-release || true
 
   # el8 has no Qt6 and a pre-C++20 compiler, so it needs Qt5 and a gcc-toolset;
-  # el9+ build against Qt6 like the other distros.
+  # el9+ build against Qt6. qttools is skipped (the build has no translations, and
+  # on el9 EPEL's qt6-linguist has an unsatisfiable LLVM dependency).
   if [ "${VERSION_ID%%.*}" = "8" ]; then
     dnf install -y \
       cmake \
@@ -159,7 +160,6 @@ install_rhel_deps() {
       libnotify-devel \
       libxkbfile-devel \
       qt5-qtbase-devel \
-      qt5-qttools-devel \
       gtk3-devel
   else
     dnf install -y \
@@ -175,7 +175,6 @@ install_rhel_deps() {
       libnotify-devel \
       libxkbfile-devel \
       qt6-qtbase-devel \
-      qt6-qttools-devel \
       gtk3-devel
   fi
 }
