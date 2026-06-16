@@ -183,6 +183,8 @@ jobs:
         id: install-deps
         if: ${{ !steps.vars.outputs.is-flatpak }}
         uses: ./.github/actions/install-deps
+        with:
+          target-name: ${{ matrix.target.name }}
 
       - name: Build
         id: build

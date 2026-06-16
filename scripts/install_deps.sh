@@ -151,6 +151,8 @@ install_rhel_deps() {
       cmake \
       make \
       ninja-build \
+      tar \
+      gzip \
       gcc-toolset-13 \
       rpm-build \
       openssl-devel \
@@ -160,12 +162,16 @@ install_rhel_deps() {
       libnotify-devel \
       libxkbfile-devel \
       qt5-qtbase-devel \
-      gtk3-devel
+      gtk3-devel \
+      gtest-devel \
+      gmock-devel
   else
     dnf install -y \
       cmake \
       make \
       ninja-build \
+      tar \
+      gzip \
       gcc-c++ \
       rpm-build \
       openssl-devel \
@@ -175,7 +181,9 @@ install_rhel_deps() {
       libnotify-devel \
       libxkbfile-devel \
       qt6-qtbase-devel \
-      gtk3-devel
+      gtk3-devel \
+      gtest-devel \
+      gmock-devel
   fi
 }
 
