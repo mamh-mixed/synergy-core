@@ -32,22 +32,9 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: ./scripts/install_deps.sh ${args}
 
-    # HACK: Needed for GTest on Windows (installed bia Meson).
-    - name: Install Meson deps (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      shell: pwsh
-      working-directory: ${{ inputs.working-directory }}
-      run: python ./scripts/install_deps.py
-
-    # Installs some Python deps (e.g. pip, etc) and the venv needed for the package step.
-    - name: Setup Python env (Linux & macOS)
-      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: ./scripts/install_deps.py
-
-    # el8/el9 ship cmake 3.20 (below our 3.22 minimum); el8 also has no C++20
-    # compiler. Put a newer cmake (and on el8 the gcc-toolset) on PATH for the build.
+    # el8/el9 ship cmake 3.20 (below our 3.22 minimum); el8 also has no C++20 compiler
+    # and only Python 3.6. Set up a newer cmake/compiler/python before the Python env
+    # and build steps that need them.
     - name: Setup RHEL toolchain
       if: ${{ startsWith(inputs.target-name, 'rocky') }}
       shell: bash
@@ -65,7 +52,26 @@ runs:
           echo "CC=${toolset}/bin/gcc" >> "$GITHUB_ENV"
           echo "CXX=${toolset}/bin/g++" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=${toolset}/lib64" >> "$GITHUB_ENV"
+
+          # el8's python3 is 3.6; the build scripts need >= 3.9, so expose python3.11 as python3.
+          mkdir -p /opt/python-shim
+          ln -sf /usr/bin/python3.11 /opt/python-shim/python3
+          echo "/opt/python-shim" >> "$GITHUB_PATH"
         fi
+
+    # HACK: Needed for GTest on Windows (installed bia Meson).
+    - name: Install Meson deps (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      working-directory: ${{ inputs.working-directory }}
+      run: python ./scripts/install_deps.py
+
+    # Installs some Python deps (e.g. pip, etc) and the venv needed for the package step.
+    - name: Setup Python env (Linux & macOS)
+      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ./scripts/install_deps.py
 
     - name: Install Qt (macOS)
       if: ${{ runner.os == 'macOS' }}

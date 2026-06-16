@@ -153,6 +153,8 @@ install_rhel_deps() {
       ninja-build \
       tar \
       gzip \
+      python3.11 \
+      python3.11-pip \
       gcc-toolset-13 \
       rpm-build \
       openssl-devel \
