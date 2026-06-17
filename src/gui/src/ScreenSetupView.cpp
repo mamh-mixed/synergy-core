@@ -99,7 +99,11 @@ void ScreenSetupView::dragMoveEvent(QDragMoveEvent *event)
       event->setDropAction(Qt::MoveAction);
       event->accept();
     } else {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
       const auto &point = event->position().toPoint();
+#else
+      const auto &point = event->pos();
+#endif
       int col = columnAt(point.x());
       int row = rowAt(point.y());
 
