@@ -17,11 +17,12 @@ Brewfile.lock.json
 
 # typical developer-created files
 deskflow-config.toml
+/Synergy.test.conf
 .vscode
 .DS_Store
 *.code-workspace
 .env*
-/scripts/*.egg-info
+/scripts
 /*.user
 *.ui.autosave
 
@@ -40,12 +41,6 @@ CMakeCache.txt
 CMakeUserPresets.json
 CMakeFiles/*
 
-# vscode folder
-/.vscode
+# AI
+/.claude
 
-# scripts folder
-/scripts
-
-# Ai helperfilers
-**/[cC]laude.[mM][dD]
-**/CLAUDE.[mM][dD]

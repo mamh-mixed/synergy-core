@@ -9,7 +9,7 @@
 
 #include "platform/OSXClipboard.h"
 
-#include <QtTypes>
+#include <QtGlobal>
 
 class OSXClipboardBMPConverter : public IOSXClipboardConverter
 {

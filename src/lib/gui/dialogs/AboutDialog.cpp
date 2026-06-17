@@ -12,12 +12,23 @@
 #include "common/Constants.h"
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
+#include "gui/StyleUtils.h"
+
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
 
 #include <QClipboard>
 
 AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique<Ui::AboutDialog>()}
 {
   ui->setupUi(this);
+
+  setWindowTitle(windowTitle().arg(kAppName));
+  ui->lblIcon->hide();
+  ui->lblName->setPixmap(QPixmap(QStringLiteral(":/image/logo-%1.png").arg(deskflow::gui::iconMode())));
+  ui->lblName->setContentsMargins(0, 0, 0, 10);
+  ui->linkContributors->hide();
 
   const int px = (fontMetrics().height() * 6);
   const QSize pixmapSize(px, px);
@@ -26,7 +37,7 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
   ui->lblIcon->setPixmap(QPixmap(QIcon::fromTheme(kRevFqdnName).pixmap(QSize().scaled(pixmapSize, Qt::KeepAspectRatio)))
   );
 
-  ui->btnCopyVersion->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditCopy));
+  ui->btnCopyVersion->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy")));
   connect(ui->btnCopyVersion, &QPushButton::clicked, this, &AboutDialog::copyVersionText);
 
   ui->lblVersion->setText(kDisplayVersion);
@@ -45,6 +56,10 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
 
   ui->btnOk->setDefault(true);
   connect(ui->btnOk, &QPushButton::clicked, this, &AboutDialog::close);
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onAbout(this);
+#endif
 }
 
 void AboutDialog::copyVersionText() const

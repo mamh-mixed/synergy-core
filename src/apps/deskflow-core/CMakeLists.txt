@@ -4,9 +4,10 @@
 # SPDX-License-Identifier: MIT
 
 set(target ${CMAKE_PROJECT_NAME}-core)
+set(filename deskflow-core)
 
 add_executable(${target}
-  "${target}.cpp"
+  "${filename}.cpp"
   CoreArgs.h
   CoreArgParser.h
   CoreArgParser.cpp
@@ -15,12 +16,12 @@ add_executable(${target}
 if(WIN32)
   # Generate rc file
   set(EXE_DESCRIPTION "${CMAKE_PROJECT_PROPER_NAME} combined server and client application")
-  set(EXE_ICON "IDI_DESKFLOW ICON DISCARDABLE \"${CMAKE_SOURCE_DIR}/src/apps/res/deskflow.ico\"")
+  set(EXE_ICON "IDI_DESKFLOW ICON DISCARDABLE \"${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.ico\"")
   configure_file(${CMAKE_SOURCE_DIR}/src/apps/res/windows.rc.in ${target}.rc)
 
   target_sources(${target} PRIVATE
-    ${target}.exe.manifest
-    ${CMAKE_SOURCE_DIR}/src/apps/res/deskflow.ico
+    ${filename}.exe.manifest
+    ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.ico
     ${CMAKE_CURRENT_BINARY_DIR}/${target}.rc
   )
 endif()

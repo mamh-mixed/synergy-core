@@ -25,8 +25,7 @@ class ServerConfigDialog;
 
 namespace deskflow::gui {
 
-// The default protocol was decided by a community vote.
-const auto kDefaultProtocol = NetworkProtocol::Barrier;
+const auto kDefaultProtocol = NetworkProtocol::Synergy;
 
 } // namespace deskflow::gui
 

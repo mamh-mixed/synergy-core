@@ -33,6 +33,8 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, ServerConfig &config)
 {
   ui->setupUi(this);
 
+  ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
+
   m_originalProtocol = Settings::value(Settings::Server::Protocol).value<NetworkProtocol>();
   connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &ServerConfigDialog::accept);
   connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &ServerConfigDialog::reject);
@@ -65,7 +67,7 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, ServerConfig &config)
   // the developer was looking at, and it's easy to accidentally save that.
   ui->tabWidget->setCurrentIndex(0);
 
-  ui->btnBrowseConfigFile->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen));
+  ui->btnBrowseConfigFile->setIcon(QIcon::fromTheme(QStringLiteral("document-open")));
   ui->lineConfigFile->setText(serverConfig().configFile());
 
   ui->rbProtocolSynergy->setChecked(serverConfig().protocol() == NetworkProtocol::Synergy);

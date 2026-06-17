@@ -8,6 +8,7 @@
 #include "SecureUtils.h"
 
 #include "base/FinalAction.h"
+#include "common/Constants.h"
 
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -85,7 +86,7 @@ void generatePemSelfSignedCert(const QString &path, int keyLength)
   X509_set_pubkey(cert, privateKey);
 
   auto *name = X509_get_subject_name(cert);
-  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>("Deskflow"), -1, -1, 0);
+  X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(kAppName), -1, -1, 0);
   X509_set_issuer_name(cert, name);
 
   X509_sign(cert, privateKey, EVP_sha256());
@@ -119,13 +120,13 @@ QString formatSSLFingerprintColumns(const QByteArray &fingerprint)
   QString formattedString;
   while (!hex.isEmpty()) {
     const auto take = std::min<size_t>(kMaxColumns, hex.size());
-    formattedString.append(hex.first(take));
+    formattedString.append(hex.left(take));
     hex.remove(0, take);
     if (formattedString.endsWith(QLatin1Char(':')))
-      formattedString.removeLast();
+      formattedString.chop(1);
     formattedString.append(QLatin1Char('\n'));
   }
-  formattedString.removeLast();
+  formattedString.chop(1);
   return formattedString;
 }
 

@@ -105,7 +105,7 @@ CoreProcess::CoreProcess(const ServerConfig &serverConfig)
 {
   m_appPath = QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), kCoreBinName);
   if (!QFile::exists(m_appPath)) {
-    qFatal("core server binary does not exist");
+    qCritical("core server binary does not exist");
     return;
   }
 
@@ -216,7 +216,8 @@ void CoreProcess::startForegroundProcess(const QStringList &args)
   using enum ProcessState;
 
   if (m_processState != Starting) {
-    qFatal("core process must be in starting state");
+    qCritical("core process must be in starting state");
+    return;
   }
 
   // only make quoted args for printing the command for convenience; so that the
@@ -245,7 +246,8 @@ void CoreProcess::startForegroundProcess(const QStringList &args)
 void CoreProcess::startProcessFromDaemon()
 {
   if (m_processState != ProcessState::Starting) {
-    qFatal("core process must be in starting state");
+    qCritical("core process must be in starting state");
+    return;
   }
 
   const auto configFile = Settings::settingsFile();
@@ -271,11 +273,13 @@ void CoreProcess::startProcessFromDaemon()
 void CoreProcess::stopForegroundProcess() const
 {
   if (m_processState != ProcessState::Stopping) {
-    qFatal("core process must be in stopping state");
+    qCritical("core process must be in stopping state");
+    return;
   }
 
   if (!m_process) {
-    qFatal("process not set, cannot stop");
+    qCritical("process not set, cannot stop");
+    return;
   }
 
   qInfo("stopping core desktop process");
@@ -291,7 +295,8 @@ void CoreProcess::stopForegroundProcess() const
 void CoreProcess::stopProcessFromDaemon()
 {
   if (m_processState != ProcessState::Stopping) {
-    qFatal("core process must be in stopping state");
+    qCritical("core process must be in stopping state");
+    return;
   }
 
   auto sendStop = [this] {
@@ -353,7 +358,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
   }
 
   if (m_mode == Settings::CoreMode::None) {
-    qFatal("set core mode before starting");
+    qCritical("core mode is not set, skipping core start");
     return;
   }
 
@@ -388,10 +393,17 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
 
   QStringList args = {coreMode};
 
+  // Pin the core to the same settings file the GUI is using. Without this the
+  // core falls through Settings::load()'s default lookup (user file before
+  // system file), so a user who has selected system scope in the GUI still
+  // gets a core running against the user-scope file. The daemon path already
+  // forwards the settings path via IPC below; this covers the foreground path.
+  args << QStringLiteral("--settings") << Settings::settingsFile();
+
   if (m_mode == Settings::CoreMode::Server) {
     const auto [hasNeededPermissions, configFilename] = persistServerConfig();
     if (configFilename.isEmpty()) {
-      qFatal("config file name empty for server args");
+      qCritical("config file name empty for server args");
       return;
     }
     if (!hasNeededPermissions) {
@@ -654,7 +666,8 @@ void CoreProcess::clearSettings()
   }
 
   if (processMode != ProcessMode::Service) {
-    qFatal("invalid process mode");
+    qCritical("invalid process mode");
+    return;
   }
 
   qInfo("clearing core settings through daemon");

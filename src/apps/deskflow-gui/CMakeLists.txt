@@ -3,16 +3,17 @@
 # SPDX-License-Identifier: MIT
 
 if(APPLE)
-  set(target Deskflow)
+  set(target ${CMAKE_PROJECT_PROPER_NAME})
 else()
-  set(target deskflow)
+  set(target ${CMAKE_PROJECT_NAME})
 endif()
+set(filename deskflow-gui)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(WIN32)
   set(EXE_DESCRIPTION "${CMAKE_PROJECT_PROPER_NAME} GUI configuration tool")
-  set(EXE_ICON "IDI_ICON1 ICON DISCARDABLE \"${CMAKE_SOURCE_DIR}/src/apps/res/deskflow.ico\" ")
+  set(EXE_ICON "IDI_ICON1 ICON DISCARDABLE \"${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.ico\" ")
   configure_file(${CMAKE_SOURCE_DIR}/src/apps/res/windows.rc.in deskflow.rc)
   set(platform_extra deskflow.rc)
 elseif(BUILD_OSX_BUNDLE)
@@ -31,14 +32,15 @@ elseif(BUILD_OSX_BUNDLE)
     @ONLY
   )
 
-  set(platform_extra ../res/Deskflow.icns)
+  set(platform_extra ${CMAKE_SOURCE_DIR}/extra/deploy/mac/bundle/Contents/Resources/${target}.icns)
   set_source_files_properties(${platform_extra} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 endif()
 
 add_executable(${target} WIN32 MACOSX_BUNDLE
   ${platform_extra}
   ../res/deskflow.qrc
-  deskflow-gui.cpp
+  ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.qrc
+  ${filename}.cpp
 )
 
 target_link_libraries(

@@ -7,6 +7,7 @@
 #include "NetworkMonitor.h"
 
 #include <QAbstractSocket>
+#include <QHostAddress>
 #include <QList>
 #include <QNetworkInterface>
 #include <QRegularExpression>
@@ -14,6 +15,24 @@
 #include <QTimer>
 
 namespace deskflow::gui {
+
+namespace {
+
+// QHostAddress::isPrivateUse() arrived in Qt 6.6; on older Qt replicate its ranges
+// (RFC 1918 private IPv4 + ULA fc00::/7) via isInSubnet().
+bool isPrivateUse(const QHostAddress &address)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+  return address.isPrivateUse();
+#else
+  return address.isInSubnet(QHostAddress(QStringLiteral("10.0.0.0")), 8) ||
+         address.isInSubnet(QHostAddress(QStringLiteral("172.16.0.0")), 12) ||
+         address.isInSubnet(QHostAddress(QStringLiteral("192.168.0.0")), 16) ||
+         address.isInSubnet(QHostAddress(QStringLiteral("fc00::")), 7);
+#endif
+}
+
+} // namespace
 
 bool NetworkMonitor::isVirtualInterface(const QString &interfaceName)
 {
@@ -96,8 +115,8 @@ QStringList NetworkMonitor::validAddresses()
   }
 
   std::ranges::sort(physicalIP4, [](const QHostAddress &a, const QHostAddress &b) {
-    if (a.isPrivateUse() != b.isPrivateUse())
-      return a.isPrivateUse();
+    if (isPrivateUse(a) != isPrivateUse(b))
+      return isPrivateUse(a);
     return a.toIPv4Address() < b.toIPv4Address();
   });
 
@@ -106,8 +125,8 @@ QStringList NetworkMonitor::validAddresses()
   });
 
   std::ranges::sort(physicalIP6, [](const QHostAddress &a, const QHostAddress &b) {
-    if (a.isPrivateUse() != b.isPrivateUse())
-      return a.isPrivateUse();
+    if (isPrivateUse(a) != isPrivateUse(b))
+      return isPrivateUse(a);
     return a.toString() < b.toString();
   });
 

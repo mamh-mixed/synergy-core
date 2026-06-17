@@ -11,6 +11,8 @@
 
 #include <QList>
 
+class QTextStream;
+
 class FingerprintDatabase
 {
 public:

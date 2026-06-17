@@ -419,7 +419,7 @@ private:
   ClipboardInfo m_clipboards[kClipboardEnd];
 
   // used in hello message sent to the client
-  NetworkProtocol m_protocol = NetworkProtocol::Barrier;
+  NetworkProtocol m_protocol = NetworkProtocol::Synergy;
 
   // the sequence number of enter messages
   uint32_t m_seqNum = 0;

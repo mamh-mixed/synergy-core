@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>About Deskflow</string>
+   <string>About %1</string>
   </property>
   <property name="windowIcon">
    <iconset theme="help-about"/>

@@ -31,15 +31,19 @@ set(CPACK_PACKAGE_NAME "${CMAKE_PROJECT_PROPER_NAME}")
 
 # Menu Entry
 set(CPACK_WIX_PROGRAM_MENU_FOLDER "${CMAKE_PROJECT_PROPER_NAME}")
-set(CPACK_PACKAGE_EXECUTABLES "deskflow" "${CMAKE_PROJECT_PROPER_NAME}")
+set(CPACK_PACKAGE_EXECUTABLES "${CMAKE_PROJECT_NAME}" "${CMAKE_PROJECT_PROPER_NAME}")
 
 # Default Install Path
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CMAKE_PROJECT_PROPER_NAME}")
 
 # Wix Specific Values
 set(CPACK_WIX_UPGRADE_GUID "027D1C8A-E7A5-4754-BB93-B2D45BFDBDC8")
-set(CPACK_WIX_UI_BANNER "${MY_DIR}/wix-banner.png")
-set(CPACK_WIX_UI_DIALOG "${MY_DIR}/wix-dialog.png")
+set(CPACK_WIX_UI_BANNER "${CMAKE_SOURCE_DIR}/extra/deploy/windows/wix-banner.png")
+set(CPACK_WIX_UI_DIALOG "${CMAKE_SOURCE_DIR}/extra/deploy/windows/wix-dialog.png")
+
+# Show the Synergy EULA (which references the canonical copy at synergyapp.io/eula)
+# on the license page instead of the GPL; the GPL still ships as the LICENSE file.
+set(CPACK_WIX_LICENSE_RTF "${CMAKE_SOURCE_DIR}/extra/deploy/windows/synergy-eula.rtf")
 
 # Required Extra Extenstions
 list(APPEND CPACK_WIX_EXTENSIONS "WixToolset.Util.wixext" "WixToolset.Firewall.wixext")
@@ -47,26 +51,39 @@ list(APPEND CPACK_WIX_EXTENSIONS "WixToolset.Util.wixext" "WixToolset.Firewall.w
 # Make sure to also put the xmlns for the ext into the wix block on generated files
 list(APPEND CPACK_WIX_CUSTOM_XMLNS "util=http://wixtoolset.org/schemas/v4/wxs/util" "firewall=http://wixtoolset.org/schemas/v4/wxs/firewall")
 
-# The patch has to know the full path of our msm file
+# Bundle the MSVC C++ runtime (CRT) as a merge module inside the MSI so that end
+# users don't have to download and install the Visual C++ redistributable
+# themselves. The merge module ships with the Visual Studio build environment.
+# Docs: https://learn.microsoft.com/en-us/cpp/windows/redistributing-components-by-using-merge-modules
+set(REDIST_MERGE_MODULE_DIR "$ENV{VCINSTALLDIR}Redist/MSVC")
+file(GLOB REDIST_MERGE_MODULE_PATHS
+  "${REDIST_MERGE_MODULE_DIR}/*/MergeModules/Microsoft_VC*_CRT_${BUILD_ARCHITECTURE}.msm")
+if (REDIST_MERGE_MODULE_PATHS)
+  # Multiple toolset versions may be installed; pick the newest.
+  list(SORT REDIST_MERGE_MODULE_PATHS)
+  list(GET REDIST_MERGE_MODULE_PATHS -1 REDIST_MERGE_MODULE_PATH)
+  message(STATUS "MSVC CRT merge module: ${REDIST_MERGE_MODULE_PATH}")
+  # XML snippets injected into wix-patch.xml.in to merge the CRT into the MSI.
+  set(WIX_REDIST_MERGE
+    "<DirectoryRef Id=\"TARGETDIR\"><Merge Id=\"VC_Redist\" SourceFile=\"${REDIST_MERGE_MODULE_PATH}\" DiskId=\"1\" Language=\"0\"/></DirectoryRef>")
+  set(WIX_REDIST_MERGE_REF "<MergeRef Id=\"VC_Redist\"/>")
+elseif(SYNERGY_VERSION_RELEASE OR SYNERGY_VERSION_SNAPSHOT)
+  # Shipping build: a missing CRT module means a broken installer for end users.
+  message(WARNING
+    "MSVC CRT merge module not found under ${REDIST_MERGE_MODULE_DIR}; "
+    "the installer will NOT bundle the Visual C++ runtime")
+else()
+  # Dev builds routinely lack the redist merge module; not bundling it is expected.
+  message(STATUS
+    "MSVC CRT merge module not found; installer will not bundle the Visual C++ "
+    "runtime (expected for dev builds)")
+endif()
+
+# The patch needs the full path of the CRT merge module (see above).
 configure_file(
   ${MY_DIR}/wix-patch.xml.in
   ${CMAKE_CURRENT_BINARY_DIR}/wix-patch.xml @ONLY
 )
 
-# This patch set ups filewall rules, the service and msm module
+# This patch sets up firewall rules, the service and the CRT merge module.
 set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_BINARY_DIR}/wix-patch.xml")
-
-# Creates a DLL that can be used by our MSI for custom actions.
-configure_file(
-  ${MY_DIR}/wix-custom.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/wix-custom.h @ONLY
-)
-add_library(
-  wix-custom SHARED
-  ${MY_DIR}/wix-custom.cpp
-)
-target_include_directories(wix-custom PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-set_target_properties(wix-custom PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-)
-target_link_libraries(wix-custom PRIVATE Msi)

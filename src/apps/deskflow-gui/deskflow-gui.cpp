@@ -17,6 +17,10 @@
 #include "gui/Messages.h"
 #include "gui/StyleUtils.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QLocalSocket>
@@ -62,6 +66,10 @@ int main(int argc, char *argv[])
   QGuiApplication::setDesktopFileName(kRevFqdnName);
 
   QApplication app(argc, argv);
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onPreInit();
+#endif
 
   // Ensure the I18N object is made before strings
   QTextStream(stdout) << "initial language: " << I18N::currentLanguage() << '\n';
@@ -151,6 +159,12 @@ int main(int argc, char *argv[])
 
   MainWindow mainWindow;
   mainWindow.open();
+
+#ifdef SYNERGY_EXTRA_HEADER
+  if (!synergy::hooks::onAppStart()) {
+    return s_exitFailed;
+  }
+#endif
 
   return QApplication::exec();
 }

@@ -11,11 +11,16 @@
 #include "common/PlatformInfo.h"
 #include "ui_SettingsDialog.h"
 
+#include "common/Constants.h"
 #include "common/I18N.h"
 #include "common/Settings.h"
 #include "gui/Messages.h"
 #include "gui/TlsUtility.h"
 #include "gui/core/NetworkMonitor.h"
+
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
 
 #include <QComboBox>
 #include <QDir>
@@ -32,6 +37,8 @@ SettingsDialog::SettingsDialog(QWidget *parent, const ServerConfig &serverConfig
 
   ui->setupUi(this);
 
+  ui->lblWlClipboard->setText(ui->lblWlClipboard->text().arg(kAppName));
+
   // these are enabled by the control next to them
   ui->lineCommandEnter->setEnabled(false);
   ui->lineCommandExit->setEnabled(false);
@@ -44,7 +51,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, const ServerConfig &serverConfig
   updateText();
 
   ui->comboTlsKeyLength->setItemIcon(0, QIcon::fromTheme(QStringLiteral("security-medium")));
-  ui->comboTlsKeyLength->setItemIcon(1, QIcon::fromTheme(QIcon::ThemeIcon::SecurityHigh));
+  ui->comboTlsKeyLength->setItemIcon(1, QIcon::fromTheme(QStringLiteral("security-high")));
   ui->lblTlsCertInfo->setFixedSize(28, 28);
 
   ui->rbIconMono->setIcon(QIcon::fromTheme(QStringLiteral("%1-symbolic").arg(kRevFqdnName)));
@@ -78,6 +85,10 @@ SettingsDialog::SettingsDialog(QWidget *parent, const ServerConfig &serverConfig
 
   setButtonBoxEnabledButtons();
   initConnections();
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onSettings(this);
+#endif
 }
 
 void SettingsDialog::changeEvent(QEvent *e)
@@ -354,15 +365,16 @@ bool SettingsDialog::isClientMode() const
 void SettingsDialog::updateKeyLengthOnFile(const QString &path)
 {
   if (!QFile(path).exists()) {
-    qFatal("tls certificate file not found: %s", qUtf8Printable(path));
+    qCritical("tls certificate file not found: %s", qUtf8Printable(path));
+    return;
   }
 
   auto length = TlsUtility::getCertKeyLength(path);
-  auto labelIcon = QPixmap(QIcon::fromTheme(QIcon::ThemeIcon::SecurityLow).pixmap(24, 24));
+  auto labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-low")).pixmap(24, 24));
   if (length == 2048)
     labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-medium")).pixmap(24, 24));
   if (length == 4096)
-    labelIcon = QPixmap(QIcon::fromTheme(QIcon::ThemeIcon::SecurityHigh).pixmap(24, 24));
+    labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-high")).pixmap(24, 24));
 
   ui->lblTlsCertInfo->setPixmap(labelIcon);
   ui->lblTlsCertInfo->setToolTip(QStringLiteral("Key length: %1 bits").arg(QString::number(length)));

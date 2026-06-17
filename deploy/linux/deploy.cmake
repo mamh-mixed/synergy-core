@@ -7,22 +7,27 @@ set(MY_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 # Install our desktop file
 install(
-  FILES ${MY_DIR}/${CMAKE_PROJECT_REV_FQDN}.desktop
+  FILES ${CMAKE_SOURCE_DIR}/extra/deploy/linux/${CMAKE_PROJECT_REV_FQDN}.desktop
   DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
 )
 
 # Install our icon
-install(FILES ${MY_DIR}/org.deskflow.deskflow.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/)
+install(
+  FILES ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy.png
+  RENAME ${CMAKE_PROJECT_REV_FQDN}.png
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/
+)
 
 # Install our symbolic icon
 install(
-  FILES ${CMAKE_SOURCE_DIR}/src/apps/res/icons/deskflow-light/apps/64/org.deskflow.deskflow-symbolic.svg
+  FILES ${CMAKE_SOURCE_DIR}/extra/src/apps/res/synergy-symbolic-light.svg
+  RENAME ${CMAKE_PROJECT_REV_FQDN}-symbolic.svg
   DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/symbolic/apps/
 )
 
 # Install our metainfo
 install(
-  FILES ${MY_DIR}/${CMAKE_PROJECT_REV_FQDN}.metainfo.xml
+  FILES ${CMAKE_SOURCE_DIR}/extra/deploy/linux/${CMAKE_PROJECT_REV_FQDN}.metainfo.xml
   DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo/
 )
 

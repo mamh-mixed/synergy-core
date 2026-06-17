@@ -31,6 +31,10 @@
 #include "net/FingerprintDatabase.h"
 #include "widgets/StatusBar.h"
 
+#ifdef SYNERGY_EXTRA_HEADER
+#include "synergy/hooks/gui_hook.h"
+#endif
+
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
@@ -89,7 +93,7 @@ MainWindow::MainWindow()
 
   // Setup Actions
   m_actionAbout->setMenuRole(QAction::AboutRole);
-  m_actionAbout->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::HelpAbout));
+  m_actionAbout->setIcon(QIcon::fromTheme(QStringLiteral("help-about")));
 
   m_actionMinimize->setIcon(QIcon::fromTheme(QStringLiteral("window-minimize-pip")));
   m_actionRestore->setIcon(QIcon::fromTheme(QStringLiteral("window-restore-pip")));
@@ -118,7 +122,7 @@ MainWindow::MainWindow()
   m_actionRestartCore->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
   m_actionRestartCore->setMenuRole(QAction::NoRole);
 
-  m_actionStopCore->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ProcessStop));
+  m_actionStopCore->setIcon(QIcon::fromTheme(QStringLiteral("process-stop")));
   m_actionStopCore->setMenuRole(QAction::NoRole);
 
   m_actionReportBug->setIcon(QIcon::fromTheme(QStringLiteral("tools-report-bug")));
@@ -157,6 +161,10 @@ MainWindow::MainWindow()
   applyConfig();
   m_statusBar->setSecurityIcon(TlsUtility::isEnabled());
   restoreWindow();
+
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onMainWindow(this, &m_coreProcess);
+#endif
 }
 MainWindow::~MainWindow()
 {
@@ -403,8 +411,15 @@ void MainWindow::startCore()
     m_serverStartSuggestedIP = m_serverStartIPs.isEmpty() ? "" : m_serverStartIPs.first();
   }
 
+#ifdef SYNERGY_EXTRA_HEADER
+  if (!synergy::hooks::onCoreStart()) {
+    return;
+  }
+#endif
+
   m_actionStartCore->setVisible(false);
   m_actionRestartCore->setVisible(true);
+
   m_coreProcess.start();
 }
 
@@ -483,6 +498,12 @@ void MainWindow::openSettings()
 
 void MainWindow::resetCore()
 {
+#ifdef SYNERGY_EXTRA_HEADER
+  if (!synergy::hooks::onCoreStart()) {
+    return;
+  }
+#endif
+
   m_coreProcess.restart();
 }
 
@@ -561,7 +582,7 @@ void MainWindow::updateModeControlLabels()
     startText = tr("Start");
     stopText = tr("Stop");
     startIcon = QIcon::fromTheme(QStringLiteral("system-run"));
-    stopIcon = QIcon::fromTheme(QIcon::ThemeIcon::ProcessStop);
+    stopIcon = QIcon::fromTheme(QStringLiteral("process-stop"));
   } else {
     startText = tr("Connect");
     stopText = tr("Disconnect");
@@ -649,6 +670,10 @@ void MainWindow::open()
   }
 
   if (Settings::value(Settings::Gui::AutoStartCore).toBool()) {
+    if (m_coreProcess.mode() == CoreMode::None) {
+      qWarning() << "skipping core auto start, mode is not set";
+      return;
+    }
     if (ui->rbModeClient->isChecked() && ui->lineHostname->text().isEmpty())
       return;
     startCore();
@@ -702,6 +727,9 @@ void MainWindow::applyConfig()
   } else {
     setWindowTitle(kAppName);
   }
+#ifdef SYNERGY_EXTRA_HEADER
+  synergy::hooks::onTitleApplied(this);
+#endif
 
   if (const auto host = Settings::value(Settings::Client::RemoteHost).toString(); !host.isEmpty())
     ui->lineHostname->setText(host);
@@ -738,7 +766,11 @@ void MainWindow::setTrayIcon()
     if (deskflow::platform::isMac())
       m_trayIcon->setIcon(QIcon::fromTheme(themeIcon));
     else
+#ifdef SYNERGY_EXTRA_HEADER
+      m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+#else
       m_trayIcon->setIcon(QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+#endif
     return;
   }
 
@@ -755,7 +787,12 @@ void MainWindow::setTrayIcon()
     return;
   }
 
-  auto icon = QIcon::fromTheme(themeIcon, QIcon(fallbackPath.arg(kAppId, iconMode(), themeIcon)));
+  auto icon =
+#ifdef SYNERGY_EXTRA_HEADER
+      synergy::hooks::trayIcon(fallbackPath.arg(kAppId, iconMode(), themeIcon));
+#else
+      QIcon::fromTheme(themeIcon, QIcon(fallbackPath.arg(kAppId, iconMode(), themeIcon)));
+#endif
   icon.setIsMask(true);
   m_trayIcon->setIcon(icon);
 }
@@ -1046,7 +1083,7 @@ void MainWindow::updateText()
   m_menuHelp->setTitle(tr("&Help"));
 
   m_actionClearSettings->setText(tr("Clear settings"));
-  m_actionReportBug->setText(tr("Report a Bug"));
+  m_actionReportBug->setText(tr("Get help"));
   m_actionMinimize->setText(tr("&Minimize to tray"));
   m_actionQuit->setText(tr("&Quit"));
   m_actionTrayQuit->setText(tr("&Quit"));

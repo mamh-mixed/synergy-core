@@ -9,6 +9,7 @@
 #include "platform/MSWindowsClipboard.h"
 
 #include "base/Log.h"
+#include "common/Constants.h"
 #include "platform/MSWindowsClipboardBitmapConverter.h"
 #include "platform/MSWindowsClipboardFacade.h"
 #include "platform/MSWindowsClipboardHTMLConverter.h"
@@ -207,7 +208,7 @@ bool MSWindowsClipboard::isOwnedByDeskflow()
 {
   // create ownership format if we haven't yet
   if (s_ownershipFormat == 0) {
-    s_ownershipFormat = RegisterClipboardFormat(TEXT("Deskflow Ownership"));
+    s_ownershipFormat = RegisterClipboardFormatW(kClipboardOwnershipFormatW);
   }
   return (IsClipboardFormatAvailable(getOwnershipFormat()) != 0);
 }
@@ -216,7 +217,7 @@ UINT MSWindowsClipboard::getOwnershipFormat()
 {
   // create ownership format if we haven't yet
   if (s_ownershipFormat == 0) {
-    s_ownershipFormat = RegisterClipboardFormat(TEXT("Deskflow Ownership"));
+    s_ownershipFormat = RegisterClipboardFormatW(kClipboardOwnershipFormatW);
   }
 
   // return the format

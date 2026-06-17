@@ -40,6 +40,7 @@ StatusBar::StatusBar(QWidget *parent)
   m_lblStatus->setText(tr("%1 is not running").arg(kAppName));
   insertPermanentWidget(2, m_lblStatus, 1);
 
+  m_btnUpdate->setObjectName(QStringLiteral("btnUpdate"));
   m_btnUpdate->setVisible(false);
   m_btnUpdate->setFlat(true);
   m_btnUpdate->setLayoutDirection(Qt::RightToLeft);
@@ -197,7 +198,7 @@ void StatusBar::updateTimerLabel()
 
 void StatusBar::setSecurityIcon(bool encrypted)
 {
-  const auto icon = QIcon::fromTheme(encrypted ? QIcon::ThemeIcon::SecurityHigh : QIcon::ThemeIcon::SecurityLow);
+  const auto icon = QIcon::fromTheme(encrypted ? QStringLiteral("security-high") : QStringLiteral("security-low"));
   m_lblSecurityIcon->setPixmap(icon.pixmap(QSize(32, 32)));
   m_encrypted = encrypted;
   setSecurityLevel(m_securityLevel);

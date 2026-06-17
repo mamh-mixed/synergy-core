@@ -42,9 +42,18 @@ public:
     return m_levelOptions.at(level);
   }
 
+  static qsizetype indexOfOption(const QString &level)
+  {
+    for (qsizetype i = 0; i < m_levelOptions.size(); ++i) {
+      if (m_levelOptions.at(i).compare(level, Qt::CaseInsensitive) == 0)
+        return i;
+    }
+    return -1;
+  }
+
   static LogLevel::Level fromOption(const QString &level)
   {
-    const auto index = m_levelOptions.indexOf(level, 0, Qt::CaseInsensitive);
+    const auto index = indexOfOption(level);
     if (index < 0 || index >= m_levelOptions.count())
       return LogLevel::Level::Info;
     return LogLevel::Level(index);
