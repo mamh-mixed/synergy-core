@@ -53,7 +53,7 @@ QString printLine(FILE *out, const QString &type, const QString &message, const 
   // stdout/stderr and Windows debug output all expect a terminated line.
   QString terminatedLogLine = logLine;
   QTextStream terminatedStream(&terminatedLogLine);
-  terminatedStream << Qt::endl;
+  terminatedStream << '\n';
 
 #if defined(Q_OS_WIN)
   // Debug output is viewable using either VS Code, Visual Studio, DebugView, or
