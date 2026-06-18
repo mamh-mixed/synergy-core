@@ -668,12 +668,14 @@ jobs:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
           path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*.flatpak
 
-  # Upload all built packages to AWS S3 for distribution. Runs after the gate
-  # (ci-passed) on push/dispatch/release events; PRs are skipped (no secrets).
-  # Layout: s3://<bucket>/<dir>/<dev|snapshot|release>/<version>/...
+  # Upload all packages that built to AWS S3 for distribution. Runs after the
+  # build jobs on push/dispatch/release events (PRs skipped, no secrets), and
+  # uploads whatever artifacts exist — one failed target must not block shipping
+  # the rest (a flaky distro shouldn't sink a whole nightly snapshot). Gated only
+  # on get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
   s3-upload:
-    needs: [ci-passed, get-version]
-    if: ${{ always() && needs.ci-passed.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'release') }}
+    needs: [get-version, build-windows, build-macos, build-linux, build-flatpak]
+    if: ${{ always() && needs.get-version.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'release') }}
     runs-on: ubuntu-latest
 
     steps:
