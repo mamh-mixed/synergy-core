@@ -60,19 +60,21 @@ jobs:
   # Quality gate to allow PR merge, used in the branch protection rules.
   ci-passed:
     runs-on: ubuntu-latest
-    needs: [build-windows, build-macos, build-linux, build-flatpak]
+    needs: [get-version, build-windows, build-macos, build-linux, build-flatpak]
     if: always()
 
     steps:
       # 'skipped' is treated as passing because the user/event deliberately
       # filtered the platform set (workflow_dispatch with inputs.platform=windows
-      # skips macos+linux jobs). A failed job is still a failure.
+      # skips macos+linux jobs). A failed job is still a failure. get-version never
+      # filters out, so requiring it catches a build skipped by its failure.
       - name: Check all jobs passed or were intentionally skipped
         run: |
           ok() {
             [[ "$1" == "success" || "$1" == "skipped" ]]
           }
-          if ok "${{needs.build-windows.result}}" \
+          if ok "${{needs.get-version.result}}" \
+             && ok "${{needs.build-windows.result}}" \
              && ok "${{needs.build-macos.result}}" \
              && ok "${{needs.build-linux.result}}" \
              && ok "${{needs.build-flatpak.result}}"; then
@@ -97,8 +99,25 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     uses: ./.github/workflows/valgrind-analysis.yml
 
+  get-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get version
+        id: get-version
+        uses: ./.github/actions/get-version
+
   build-windows:
-    needs: lint-clang
+    needs: [lint-clang, get-version]
     if: ${{ inputs.platform == '' || inputs.platform == 'windows' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
@@ -139,10 +158,6 @@ jobs:
         with:
           qt-version: ${{ matrix.target.qt-version }}
           vcpkg-triplet: ${{ matrix.target.vcpkg-triplet }}
-
-      - name: Get version
-        id: get-version
-        uses: ./.github/actions/get-version
 
       - name: Update Windows Paths
         shell: pwsh
@@ -247,11 +262,11 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ steps.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
   build-macos:
-    needs: lint-clang
+    needs: [lint-clang, get-version]
     if: ${{ inputs.platform == '' || inputs.platform == 'macos' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
@@ -289,10 +304,6 @@ jobs:
         uses: ./.github/actions/install-dependencies
         with:
           qt-version: ${{ matrix.target.qt-version }}
-
-      - name: Get version
-        id: get-version
-        uses: ./.github/actions/get-version
 
       - name: Configure
         run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ secrets.APPLE_CODESIGN_ID }}"
@@ -404,11 +415,11 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ steps.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
   build-linux:
-    needs: lint-clang
+    needs: [lint-clang, get-version]
     if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
@@ -568,10 +579,6 @@ jobs:
           rm -f /usr/lib/$(gcc -dumpmachine)/libportal.so*
           ldconfig
 
-      - name: Get version
-        id: get-version
-        uses: ./.github/actions/get-version
-
       - name: Configure
         run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }}
 
@@ -590,7 +597,7 @@ jobs:
             export OSNAME=$(cat /etc/os-release | grep ^ID= | sed 's/ID=//g')
             [ "$OSNAME" = "arch" ] && OSNAME="arch-linux"
             export ARCH=$(uname -m)
-            mv *.pkg.tar.zst ${{ env.PACKAGE_PREFIX }}_${{ steps.get-version.outputs.version }}_${OSNAME}_${ARCH}.pkg.tar.zst
+            mv *.pkg.tar.zst ${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_${OSNAME}_${ARCH}.pkg.tar.zst
             cd ..
           else
             cmake --build build --config Release -j8 --target package
@@ -608,11 +615,11 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ steps.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
 
   build-flatpak:
-    needs: lint-clang
+    needs: [lint-clang, get-version]
     if: ${{ inputs.platform == '' || inputs.platform == 'linux' }}
     name: flatpak-${{matrix.flatpak.arch}}
     runs-on: ${{matrix.flatpak.runs-on}}
@@ -637,10 +644,6 @@ jobs:
 
       - run: git config --global protocol.file.allow always
 
-      - name: Get version
-        id: get-version
-        uses: ./.github/actions/get-version
-
       - name: Lint appsteam
         run: flatpak-builder-lint appstream extra/deploy/linux/com.symless.synergy.metainfo.xml
 
@@ -650,7 +653,7 @@ jobs:
       - name: Build
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: ${{ env.PACKAGE_PREFIX }}_${{ steps.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}.flatpak
+          bundle: ${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}.flatpak
           manifest-path: extra/deploy/linux/flatpak/com.symless.synergy.yml
           cache-key: flatpak-builder-${{matrix.flatpak.arch}}-2.0
           arch: ${{matrix.flatpak.arch}}
@@ -662,28 +665,18 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ steps.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
           path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*.flatpak
 
   # Upload all built packages to AWS S3 for distribution. Runs after the gate
   # (ci-passed) on push/dispatch/release events; PRs are skipped (no secrets).
   # Layout: s3://<bucket>/<dir>/<dev|snapshot|release>/<version>/...
   s3-upload:
-    needs: ci-passed
+    needs: [ci-passed, get-version]
     if: ${{ always() && needs.ci-passed.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'release') }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Get version
-        id: get-version
-        uses: ./.github/actions/get-version
-
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
@@ -701,7 +694,7 @@ jobs:
       - name: Upload to AWS S3
         shell: bash
         run: |
-          version="${{ steps.get-version.outputs.version }}"
+          version="${{ needs.get-version.outputs.version }}"
           s3_uri="${{ inputs.aws-s3-uri || format('s3://{0}/{1}', vars.AWS_S3_BUCKET, vars.AWS_S3_UPLOAD_DIR) }}"
           s3_uri="${s3_uri%/}"
 
@@ -720,7 +713,7 @@ jobs:
           aws s3 cp ./dist/ "$url" --recursive
 
   report:
-    needs: [build-windows, build-macos, build-linux, build-flatpak, s3-upload]
+    needs: [get-version, build-windows, build-macos, build-linux, build-flatpak, s3-upload]
     if: ${{ !cancelled() && github.event_name != 'pull_request' && contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
