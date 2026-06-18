@@ -561,6 +561,12 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      # The container runs as root over a host-owned workspace, so git rejects it as
+      # dubious-owned and the Configure step's `git describe` degrades the rev count
+      # to 0, naming packages +r0 while non-container builds use the real count.
+      - name: Trust workspace for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
         with:
