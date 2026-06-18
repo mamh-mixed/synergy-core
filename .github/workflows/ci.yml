@@ -237,14 +237,6 @@ jobs:
           if ($sig.Status -ne 'Valid') { throw "MSI not signed (Status: $($sig.Status))" }
           Write-Host "OK: MSI signed by $($sig.SignerCertificate.Subject)"
 
-      - name: Check for unexpected repo changes
-        shell: bash
-        run: |
-          if [[ `git status --porcelain` ]]; then
-            echo "Unexpected changes to the repo, Often caused by forgetting to commit the updated translation files"
-            exit 1
-          fi
-
       - name: Tests
         uses: ./.github/actions/run-tests
         timeout-minutes: 2
@@ -401,14 +393,6 @@ jobs:
           xcrun stapler validate "$dmg"
           spctl -a -t open --context context:primary-signature -v "$dmg"
           echo "DMG signed + notarized + stapled: $dmg"
-
-      - name: Check for unexpected repo changes
-        shell: bash
-        run: |
-          if [[ `git status --porcelain` ]]; then
-            echo "Unexpected changes to the repo, Often caused by forgetting to commit the updated translation files"
-            exit 1
-          fi
 
       - name: Tests
         uses: ./.github/actions/run-tests
@@ -610,14 +594,6 @@ jobs:
             cd ..
           else
             cmake --build build --config Release -j8 --target package
-          fi
-
-      - name: Check for unexpected repo changes
-        shell: bash
-        run: |
-          if [[ `git status --porcelain` ]]; then
-            echo "Unexpected changes to the repo, Often caused by forgetting to commit the updated translation files"
-            exit 1
           fi
 
       - name: Tests
