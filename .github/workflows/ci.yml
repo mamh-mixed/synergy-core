@@ -122,6 +122,12 @@ jobs:
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
     timeout-minutes: 30
+
+    env:
+      # esigner-codesign installs Corretto 11 when JAVA_VERSION < 11; none exists for
+      # Windows/arm64, so pin >= 11 to skip that install and use the preinstalled JDK.
+      JAVA_VERSION: "21"
+
     strategy:
       fail-fast: false
       matrix:
