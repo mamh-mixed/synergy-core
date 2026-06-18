@@ -629,13 +629,6 @@ jobs:
         with:
           like: ${{ matrix.target.like }}
 
-      - name: Update Development Documentation
-        if: matrix.target.like == 'arch' && github.ref == 'refs/heads/beta'
-        uses: JamesIves/github-pages-deploy-action@v4.7.3
-        with:
-          branch: gh-pages
-          folder: build/docs/dev/html
-
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
