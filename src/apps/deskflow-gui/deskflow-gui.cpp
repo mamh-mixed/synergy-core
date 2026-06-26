@@ -23,9 +23,11 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QDebug>
 #include <QLocalSocket>
 #include <QMessageBox>
 #include <QSharedMemory>
+#include <QTextStream>
 
 #if defined(Q_OS_MACOS)
 #include <Carbon/Carbon.h>
@@ -98,7 +100,7 @@ int main(int argc, char *argv[])
   }
 
   if (parser.isSet(versionOption)) {
-    QTextStream(stdout) << kHeader << kCopyright << Qt::endl;
+    QTextStream(stdout) << kHeader << kCopyright << '\n';
     return s_exitSuccess;
   }
 

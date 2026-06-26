@@ -37,6 +37,7 @@
 
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QDebug>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QLocalServer>
@@ -738,7 +739,7 @@ void MainWindow::applyConfig()
   setTrayIcon();
 
   if (const auto ip = Settings::value(Settings::Core::Interface).toString(); !ip.isEmpty()) {
-    m_serverStartIPs = {ip};
+    m_serverStartIPs = QStringList{ip};
     m_serverStartSuggestedIP = ip;
   }
 

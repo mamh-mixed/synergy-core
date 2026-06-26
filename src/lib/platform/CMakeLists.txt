@@ -3,11 +3,12 @@
 # SPDX-FileCopyrightText: (C) 2009 - 2012 Nick Bolton
 # SPDX-License-Identifier: MIT
 
+# Detected, not REQUIRED: RHEL ships no libei/libportal, so those legs build X11-only.
 if(UNIX AND NOT APPLE)
-  pkg_check_modules(LIBEI REQUIRED QUIET "libei-1.0 >= ${REQUIRED_LIBEI_VERSION}")
+  pkg_check_modules(LIBEI QUIET "libei-1.0 >= ${REQUIRED_LIBEI_VERSION}")
   message(STATUS "libei version: ${LIBEI_VERSION}")
 
-  pkg_check_modules(LIBPORTAL REQUIRED QUIET "libportal >= ${REQUIRED_LIBPORTAL_VERSION}")
+  pkg_check_modules(LIBPORTAL QUIET "libportal >= ${REQUIRED_LIBPORTAL_VERSION}")
   message(STATUS "libportal version: ${LIBPORTAL_VERSION}")
 
   # Check if we have the restore ability in the IC portal
@@ -191,7 +192,12 @@ if(UNIX)
     if(${LIBXKBCOMMON_VERSION} VERSION_GREATER_EQUAL "1.10")
       target_compile_definitions(platform PRIVATE HAVE_XKB_KEYMAP_MOD_GET_MASK=1)
     endif()
-    target_compile_definitions(platform PUBLIC WINAPI_LIBEI WINAPI_LIBPORTAL)
+    if(LIBEI_FOUND)
+      target_compile_definitions(platform PUBLIC WINAPI_LIBEI)
+    endif()
+    if(LIBPORTAL_FOUND)
+      target_compile_definitions(platform PUBLIC WINAPI_LIBPORTAL)
+    endif()
     if (HAVE_IC_RESTORE)
       target_compile_definitions(platform PUBLIC HAVE_LIBPORTAL_INPUTCAPTURE_RESTORE)
     endif()

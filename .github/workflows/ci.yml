@@ -435,29 +435,31 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - name: "debian-x86_64"
+          - name: "debian-13-x86_64"
             runs-on: ubuntu-latest
-            container: debian:stable-slim
+            container: debian:13-slim
             like: "debian"
             config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
 
-          - name: "debian-arm64"
+          - name: "debian-13-arm64"
             runs-on: ubuntu-24.04-arm
-            container: debian:stable-slim
+            container: debian:13-slim
             like: "debian"
             config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
 
-          - name: "debian-testing-x86_64"
+          # Debian 12's GCC 12 trips -Wstringop-overflow false positives (gone in GCC 13),
+          # so warnings-as-errors is off here; the GCC 13+ legs keep it on.
+          - name: "debian-12-x86_64"
             runs-on: ubuntu-latest
-            container: debian:testing-slim
+            container: debian:12-slim
             like: "debian"
-            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
+            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF"
 
-          - name: "debian-testing-arm64"
+          - name: "debian-12-arm64"
             runs-on: ubuntu-24.04-arm
-            container: debian:testing-slim
+            container: debian:12-slim
             like: "debian"
-            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
+            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF"
 
           - name: "fedora-42-x86_64"
             runs-on: ubuntu-latest
@@ -494,6 +496,19 @@ jobs:
             container: fedora:44
             like: "fedora"
             config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr"
+
+          # RHEL/Rocky: Qt5, X11-only, tests off (EPEL GoogleTest too old).
+          - name: "rocky-8-x86_64"
+            runs-on: ubuntu-latest
+            container: rockylinux:8
+            like: "rhel"
+            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTS=OFF"
+
+          - name: "rocky-9-x86_64"
+            runs-on: ubuntu-latest
+            container: rockylinux:9
+            like: "rhel"
+            config-args: "-G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTS=OFF"
 
           - name: "opensuse-x86_64"
             runs-on: ubuntu-latest
@@ -551,6 +566,8 @@ jobs:
             zypper install -y --force-resolution git
           elif [ "${{ matrix.target.like }}" == "arch" ]; then
             pacman -Syu --noconfirm git
+          elif [ "${{ matrix.target.like }}" == "rhel" ]; then
+            dnf install -y git
           else
             echo "Unknown: ${{ matrix.target.like }}"
           fi
@@ -616,6 +633,7 @@ jobs:
           fi
 
       - name: Tests
+        if: ${{ matrix.target.like != 'rhel' }}
         uses: ./.github/actions/run-tests
         timeout-minutes: 2
 
